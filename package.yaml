@@ -20,13 +20,21 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/akshaymankar/dhall-fly#readme>
 
 dependencies:
+- aeson
+- aeson-casing
 - base >= 4.7 && < 5
+- bytestring
+- dhall
+- dhall-json
+- unordered-containers
+- text
+- yaml
 
 library:
   source-dirs: src
 
 executables:
-  dhall-fly-exe:
+  dhall-fly:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
