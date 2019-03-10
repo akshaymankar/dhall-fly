@@ -1,0 +1,3 @@
+[submodule "dhall-concourse"]
+	path = dhall-concourse
+	url = git@github.com:akshaymankar/dhall-concourse

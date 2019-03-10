@@ -24,9 +24,11 @@ dependencies:
 - aeson-casing
 - base >= 4.7 && < 5
 - bytestring
+- containers
 - dhall
 - dhall-json
 - unordered-containers
+- template-haskell
 - text
 - yaml
 

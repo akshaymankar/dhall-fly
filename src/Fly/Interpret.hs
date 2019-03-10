@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE RecordWildCards   #-}
 module Fly.Interpret where
 
@@ -9,130 +9,16 @@ import Dhall
 import Dhall.Core      (Chunks (..), Expr (..), Var (..))
 import Dhall.Map       (Map, fromList, lookup)
 import Dhall.Parser    (Src)
+import Dhall.TH
 import Dhall.TypeCheck (X)
 import Fly.Types       hiding (getVersion, resourceType, stepHooks, taskSpec)
 
 import qualified Dhall.Core
 import qualified Dhall.JSON
 
-textPairInDhall = Record (fromList [("mapKey", Text), ("mapValue", Text)])
-
-assocListInDhall = App List textPairInDhall
-
-optionalAssocListInDhall = App Optional assocListInDhall
-
-resourceTypeInDhall =
-  Union (fromList [ ("Custom", Record (fromList [ ("name", Text)
-                                                , ("source", optionalAssocListInDhall)
-                                                , ("type", Text)]))
-                  , ("InBuilt", Text)])
-resourceInDhall =
-  Record (fromList [ ("check_every", App Optional Text)
-                   , ("name", Text)
-                   , ("params", optionalAssocListInDhall)
-                   , ("source", optionalAssocListInDhall)
-                   , ("tags", App Optional (App List Text))
-                   , ("type", resourceTypeInDhall)
-                   , ("version", optionalAssocListInDhall)
-                   , ("webhook_token", App Optional Text)])
-
-taskRunConfigInDhall = Record (fromList [ ("args", App Optional (App List Text))
-                                        , ("dir", App Optional Text)
-                                        , ("path", Text)
-                                        , ("user", App Optional Text)])
-
-taskImageResourceInDhall = Record (fromList [ ("params", optionalAssocListInDhall)
-                                            , ("source", assocListInDhall)
-                                            , ("type", Text)
-                                            , ("version", optionalAssocListInDhall)])
-
-taskInputInDhall = Record (fromList [ ("name", Text)
-                                    , ("path", App Optional Text)
-                                    , ("optional", App Optional Bool)])
-
-
-taskOutputInDhall = Record (fromList [ ("name", Text)
-                                     , ("path", App Optional Text)
-                                     ])
-
-taskCacheInDhall = Record (fromList [("path", Text)])
-
-taskConfigInDhall =
-  Record (fromList [ ("platform", Text)
-                   , ("run", taskRunConfigInDhall)
-                   , ("image_resource", App Optional taskImageResourceInDhall)
-                   , ("rootfs_uri", App Optional Text)
-                   , ("inputs", App Optional (App List taskInputInDhall))
-                   , ("outputs", App Optional (App List taskOutputInDhall))
-                   , ("caches", App Optional (App List taskCacheInDhall))
-                   , ("params", optionalAssocListInDhall)
-                   ])
-taskSpecInDhall = Union (fromList [ ("Config", taskConfigInDhall)
-                                  , ("File", Text)])
-
-getVersionInDhall = Union (fromList [ ("Latest", Text)
-                                    , ("Every", Text)
-                                    , ("SpecificVersion", assocListInDhall)])
-
-getStepInDhall = Record (fromList [ ("get", App Optional Text)
-                                  , ("resource", resourceInDhall)
-                                  , ("params", optionalAssocListInDhall)
-                                  , ("version", App Optional getVersionInDhall)
-                                  , ("passed", App Optional (App List Text))
-                                  , ("trigger", App Optional Bool)
-                                  ])
-
-putStepInDhall = Record (fromList [ ("put", App Optional Text)
-                                  , ("resource", resourceInDhall)
-                                  , ("params", optionalAssocListInDhall)
-                                  , ("get_params", optionalAssocListInDhall)
-                                  ])
-
-taskStepInDhall = Record (fromList [ ("task", Text)
-                                   , ("config", taskSpecInDhall)
-                                   , ("privileged", App Optional Bool)
-                                   , ("params", optionalAssocListInDhall)
-                                   , ("image", App Optional Text)
-                                   , ("input_mapping", optionalAssocListInDhall)
-                                   , ("output_mapping", optionalAssocListInDhall)
-                                   ])
-
-stepHooksInDhall :: Expr Src X -> Expr Src X
-stepHooksInDhall step = Record (fromList [ ("on_success", App Optional step)
-                                        , ("on_failure", App Optional step)
-                                        , ("on_abort", App Optional step)
-                                        , ("ensure", App Optional step)
-                                        ])
-
-
-stepInDhall = Pi "Step" (Const Dhall.Core.Type)
-              (Pi "GetStep" (Pi "_" getStepInDhall (Pi "_" hooks step))
-               (Pi "PutStep" (Pi "_" putStepInDhall (Pi "_" hooks step))
-                (Pi "TaskStep" (Pi "_" taskStepInDhall (Pi "_" hooks step))
-                 (Pi "AggregateStep" (Pi "_" (App List step) (Pi "_" hooks step))
-                  (Pi "DoStep" (Pi "_" (App List step) (Pi "_" hooks step))
-                   (Pi "TryStep" (Pi "_" step (Pi "_" hooks step)) step))))))
-  where step = (Var (V "Step" 0))
-        hooks = (stepHooksInDhall step)
-
-jobInDhall = Record (fromList [ ("name", Text)
-                              , ("plan", App List stepInDhall)
-                              , ("serial", App Optional Bool)
-                              , ("build_logs_to_retain", App Optional Natural)
-                              , ("serial_groups", App Optional (App List Text))
-                              , ("max_in_flight", App Optional Natural)
-                              , ("public", App Optional Bool)
-                              , ("disable_manual_trigger", App Optional Bool)
-                              , ("interruptible", App Optional Bool)
-                              , ("on_success", App Optional stepInDhall)
-                              , ("on_failure", App Optional stepInDhall)
-                              , ("on_abort", App Optional stepInDhall)
-                              , ("ensure", App Optional stepInDhall)
-                              ])
-
 assocList :: Type Value
 assocList = Type{..} where
-  expected = assocListInDhall
+  expected = [dhallExpr|List ./dhall-concourse/types/TextTextPair.dhall|]
   extract l@(ListLit _ _) = case Dhall.JSON.dhallToJSON (Dhall.JSON.convertToHomogeneousMaps c l) of
                               Left _  -> Nothing
                               Right v -> pure v
@@ -141,7 +27,7 @@ assocList = Type{..} where
 
 textPair :: Type (Text, Text)
 textPair = Type{..} where
-  expected = textPairInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TextTextPair.dhall|]
   extract (RecordLit m) = (,)
                        <$> extractFromMap "mapKey" strictText
                        <*> extractFromMap "mapValue" strictText
@@ -155,14 +41,14 @@ extractCustomResourceType m = ResourceTypeCustom
 
 resourceType :: Type ResourceType
 resourceType = Type{..} where
-  expected = resourceTypeInDhall
+  expected = [dhallExpr|./dhall-concourse/types/ResourceType.dhall|]
   extract (UnionLit "Custom" (RecordLit m) _) = extractCustomResourceType m
   extract (UnionLit "InBuilt" (TextLit (Chunks [] t)) _) = pure $ ResourceTypeInBuilt t
   extract _ = Nothing
 
 resource :: Type Resource
 resource = Type{..} where
-  expected = resourceInDhall
+  expected = [dhallExpr|./dhall-concourse/types/Resource.dhall|]
   extract (RecordLit m) =
     Resource
     <$> extractFromMap "name"          strictText
@@ -178,7 +64,7 @@ resource = Type{..} where
 
 taskRunConfig :: Type TaskRunConfig
 taskRunConfig = Type{..} where
-  expected = taskRunConfigInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskRunConfig.dhall|]
   extract (RecordLit m) =
     TaskRunConfig
     <$> extractFromMap "path" strictText
@@ -190,7 +76,7 @@ taskRunConfig = Type{..} where
 
 taskImageResource :: Type TaskImageResource
 taskImageResource = Type{..} where
-  expected = taskImageResourceInDhall
+  expected = [dhallExpr|./dhall-concourse/types/ImageResource.dhall|]
   extract (RecordLit m) =
     TaskImageResource
     <$> extractFromMap "type" strictText
@@ -202,7 +88,7 @@ taskImageResource = Type{..} where
 
 taskInput :: Type TaskInput
 taskInput = Type{..} where
-  expected = taskInputInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskInput.dhall|]
   extract (RecordLit m) =
     TaskInput
     <$> extractFromMap "name" strictText
@@ -213,7 +99,7 @@ taskInput = Type{..} where
 
 taskOutput :: Type TaskOutput
 taskOutput = Type{..} where
-  expected = taskOutputInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskOutput.dhall|]
   extract (RecordLit m) =
     TaskOutput
     <$> extractFromMap "name" strictText
@@ -223,7 +109,7 @@ taskOutput = Type{..} where
 
 taskCache :: Type TaskCache
 taskCache = Type{..} where
-  expected = taskCacheInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskCache.dhall|]
   extract (RecordLit m) =
     TaskCache
     <$> extractFromMap "path" strictText
@@ -232,7 +118,7 @@ taskCache = Type{..} where
 
 taskConfig :: Type TaskConfig
 taskConfig = Type{..} where
-  expected = taskConfigInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskConfig.dhall|]
   extract (RecordLit m) =
     TaskConfig
     <$> extractFromMap "platform" strictText
@@ -248,14 +134,14 @@ taskConfig = Type{..} where
 
 taskSpec :: Type TaskSpec
 taskSpec = Type{..} where
-  expected = taskSpecInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskSpec.dhall|]
   extract (UnionLit "Config" c _) = TaskSpecConfig <$> Dhall.extract taskConfig c
   extract (UnionLit "File" (TextLit (Chunks [] t)) _) = pure $ TaskSpecFile t
   extract _ = Nothing
 
 step :: Type Step
 step = Type{..} where
-  expected = stepInDhall
+  expected = [dhallExpr|./dhall-concourse/types/Step.dhall|]
   extract (Lam _ _ -- Step
            (Lam _ _ -- GetStep
             (Lam _ _ -- PutStep
@@ -268,7 +154,7 @@ step = Type{..} where
 
 getVersion :: Type GetVersion
 getVersion = Type{..} where
-  expected = getVersionInDhall
+  expected = [dhallExpr|./dhall-concourse/types/GetVersion.dhall|]
   extract (UnionLit "Latest" (TextLit _) _) = pure GetVersionLatest
   extract (UnionLit "Every" (TextLit _) _) = pure GetVersionEvery
   extract (UnionLit "SpecificVersion" l@(ListLit _ _) _) =
@@ -278,7 +164,7 @@ getVersion = Type{..} where
 
 getStep :: Type GetStep
 getStep = Type{..} where
-  expected = getStepInDhall
+  expected = [dhallExpr|./dhall-concourse/types/GetStep.dhall|]
   extract (RecordLit m) =
     GetStep
     <$> extractFromMap "get" (Dhall.maybe strictText)
@@ -291,7 +177,7 @@ getStep = Type{..} where
 
 putStep :: Type PutStep
 putStep = Type{..} where
-  expected = putStepInDhall
+  expected = [dhallExpr|./dhall-concourse/types/PutStep.dhall|]
   extract (RecordLit m) =
     PutStep
     <$> extractFromMap "put" (Dhall.maybe strictText)
@@ -302,7 +188,7 @@ putStep = Type{..} where
 
 taskStep :: Type TaskStep
 taskStep = Type{..} where
-  expected = taskStepInDhall
+  expected = [dhallExpr|./dhall-concourse/types/TaskStep.dhall|]
   extract (RecordLit m) =
     TaskStep
     <$> extractFromMap "task" strictText
@@ -314,9 +200,9 @@ taskStep = Type{..} where
     <*> extractFromMap "output_mapping" (Dhall.maybe $ list textPair)
     where extractFromMap = withType m
 
-stepHooks :: Expr Src X -> Type StepHooks
-stepHooks s = Type{..} where
-  expected = stepHooksInDhall s
+stepHooks :: Type StepHooks
+stepHooks = Type{..} where
+  expected = [dhallExpr|./dhall-concourse/types/StepHooks.dhall ./dhall-concourse/types/Step.dhall|]
   extract (RecordLit m) =
     StepHooks
     <$> extractFromMap "on_success" (Dhall.maybe step)
@@ -328,7 +214,7 @@ stepHooks s = Type{..} where
 
 extractStepFromApps :: Expr Src X -> Maybe Step
 extractStepFromApps (App (App (Var (V "_" n)) s) hooks) =
-  stepFn <*> Dhall.extract (stepHooks (Var (V "_" 6))) hooks
+  stepFn <*> Dhall.extract (stepHooks) hooks
   where stepFn = case n of
                    5 -> Get <$> Dhall.extract getStep s
                    4 -> Put <$> Dhall.extract putStep s
@@ -341,7 +227,7 @@ extractStepFromApps _ = Nothing
 
 job :: Type Job
 job = Type{..} where
-  expected = jobInDhall
+  expected = [dhallExpr|./dhall-concourse/types/Job.dhall|]
   extract (RecordLit m) =
     Job
     <$> extractFromMap "name" strictText
