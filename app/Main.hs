@@ -40,7 +40,7 @@ getResourcesFromJob Job{..} = concatMap getResourcesFromStep jobPlan
 main :: IO ()
 main = do
   stdin <- Data.Text.IO.getContents
-  jobs <- input (list job) stdin
+  jobs <- (input auto stdin :: IO [Job])
   let resources = nub $ concatMap getResourcesFromJob jobs
       resourceTypes = nub $ customResourceTypes $ map Fly.Types.resourceType resources
     in BC8.putStrLn $ encode $ omitNull $ object [ "resource_types" .= resourceTypes
