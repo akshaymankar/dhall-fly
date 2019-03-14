@@ -1,17 +1,26 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE ViewPatterns      #-}
 module Fly.Interpret where
 
-import Data.Aeson      (Value)
-import Data.Text       (Text)
+import Data.Aeson          (Value (..))
+import Data.HashMap.Strict as M
+import Data.Scientific
+import Data.Text           (Text)
 import Dhall
-import Dhall.Core      (Chunks (..), Expr (..), Var (..))
-import Dhall.Map       (Map, fromList, lookup)
-import Dhall.Parser    (Src)
+import Dhall.Core          (Chunks (..), Expr (..), Var (..))
+import Dhall.Map           (Map, fromList, lookup)
+import Dhall.Parser        (Src)
 import Dhall.TH
-import Dhall.TypeCheck (X)
-import Fly.Types       hiding (getVersion, resourceType, autoHooks, taskSpec)
+import Dhall.TypeCheck     (X)
+import Fly.Types           hiding (autoHooks, getVersion, resourceType,
+                            taskSpec)
+
+import qualified Data.Foldable as F
+import qualified Data.Sequence as S
+import qualified Data.Vector   as V
 
 import qualified Dhall.Core
 import qualified Dhall.JSON
@@ -34,6 +43,36 @@ textPair = Type{..} where
                        where extractFromMap = withType m
   extract _ = Nothing
 
+instance Interpret Value where
+  autoWith _ = Type{..} where
+    expected = [dhallExpr|./dhall-concourse/types/JSONObject.dhall|]
+    extract (Lam _ _ -- JSON
+             (Lam _ _ -- string
+              (Lam _ _ -- number
+               (Lam _ _ -- object
+                (Lam _ _ -- array
+                 (Lam _ _ -- bool
+                  (Lam _ _ -- null
+                   x))))))) = extractJSONFromApps x
+    extract x = extractJSONFromApps x
+    extractJSONFromApps (App (Var (V "string" _)) (TextLit (Chunks _ t))) = pure $ String t
+    extractJSONFromApps (App (Var (V "number" _)) (DoubleLit n)) = pure $ Number $ fromFloatDigits n
+    extractJSONFromApps (App (Var (V "object" _)) o) = Object <$> Dhall.extract auto o
+    extractJSONFromApps (App (Var (V "array" _)) a) = Array . V.fromList <$> Dhall.extract auto a
+    extractJSONFromApps (App (Var (V "bool" _)) b) = Data.Aeson.Bool <$> Dhall.extract auto b
+    extractJSONFromApps (Var (V "null" _)) = pure Null
+    extractJSONFromApps x = Nothing
+
+instance Interpret (HashMap Text Value) where
+  autoWith _ = Type{..} where
+    expected = [dhallExpr|./dhall-concourse/types/JSONObject.dhall|]
+    extract (ListLit _ x) = M.fromList <$> (Prelude.sequence $ Prelude.map extractPair (F.toList x))
+    extractPair (RecordLit m) = do
+      key <- Dhall.extract auto =<< (Dhall.Map.lookup "mapKey" m)
+      val <- Dhall.extract auto =<< (Dhall.Map.lookup "mapValue" m)
+      Just (key, val)
+    extractPair _ = Nothing
+
 instance Interpret ResourceType where
   autoWith _ = Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/ResourceType.dhall|]
@@ -44,7 +83,7 @@ instance Interpret ResourceType where
       ResourceTypeCustom
         <$> extractFromMap "name" auto
         <*> extractFromMap "type" auto
-        <*> extractFromMap "source" (Dhall.maybe assocList)
+        <*> extractFromMap "source" auto
         where extractFromMap = withType m
 
 instance Interpret Resource where
@@ -212,17 +251,14 @@ instance Interpret Step where
                   (Lam _ _ -- TryStep
                    x))))))) = extractStepFromApps x
     extract x = extractStepFromApps x -- While recursing it loses all the `Lam`s
-
-    extractStepFromApps (App (App (Var (V "_" n)) s) hooks) = autoFn s n <*> Dhall.extract auto hooks
+    extractStepFromApps (App (App (Var (V "GetStep" _)) s) hooks) = buildStep Get s hooks
+    extractStepFromApps (App (App (Var (V "PutStep" _)) s) hooks) = buildStep Put s hooks
+    extractStepFromApps (App (App (Var (V "TaskStep" _)) s) hooks) = buildStep Task s hooks
+    extractStepFromApps (App (App (Var (V "AggregateStep" _)) s) hooks) = buildStep Aggregate s hooks
+    extractStepFromApps (App (App (Var (V "DoStep" _)) s) hooks) = buildStep Do s hooks
+    extractStepFromApps (App (App (Var (V "TryStep" _)) s) hooks) = buildStep Try s hooks
     extractStepFromApps _ = Nothing
-    autoFn s n = case n of
-                    5 -> Get <$> Dhall.extract auto s
-                    4 -> Put <$> Dhall.extract auto s
-                    3 -> Task <$> Dhall.extract auto s
-                    2 -> Aggregate <$> Dhall.extract auto s
-                    1 -> Do <$> Dhall.extract auto s
-                    0 -> Try <$> Dhall.extract auto s
-                    _ -> Nothing
+    buildStep f x y = f <$> Dhall.extract auto x <*> Dhall.extract auto y
 
 instance Interpret Job where
   autoWith _ = Type{..} where

@@ -27,9 +27,11 @@ dependencies:
 - containers
 - dhall
 - dhall-json
-- unordered-containers
+- scientific
 - template-haskell
 - text
+- unordered-containers
+- vector
 - yaml
 
 library:
@@ -56,3 +58,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - dhall-fly
+    - hspec

@@ -8,9 +8,10 @@ module Fly.Types where
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
-import Data.Maybe        (fromMaybe)
-import Data.Text         (Text)
-import Dhall             (Natural)
+import Data.HashMap.Strict
+import Data.Maybe          (fromMaybe)
+import Data.Text           (Text)
+import Dhall               (Natural)
 import GHC.Generics
 
 import qualified Data.HashMap.Strict as M
@@ -20,7 +21,7 @@ import qualified Dhall.JSON
 data ResourceType = ResourceTypeInBuilt Text
                   | ResourceTypeCustom { rtcName   :: Text
                                        , rtcType   :: Text
-                                       , rtcSource :: Maybe Value
+                                       , rtcSource :: Maybe (HashMap Text Value)
                                        }
                     deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
