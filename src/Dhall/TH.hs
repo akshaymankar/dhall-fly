@@ -15,7 +15,7 @@ dhallExpr = QuasiQuoter { quoteExp = compileDhall
                         , quoteDec  = notHandled "declarations"
                         }
   where notHandled things = error $
-          things ++ " are not handled by the regex quasiquoter."
+          things ++ " are not handled by the dhall expression quasiquoter."
 
 liftText :: Text -> Q Exp
 liftText txt = AppE (VarE 'pack) <$> lift (unpack txt)
