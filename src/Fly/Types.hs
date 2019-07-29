@@ -136,7 +136,7 @@ instance ToJSON PutStep where
                               , "get_params" .= putGetParams
                               ]
 
-data TaskStep = TaskStep { taskName          :: Text
+data TaskStep = TaskStep { taskTask          :: Text
                          , taskSpec          :: TaskSpec
                          , taskPrivileged    :: Maybe Bool
                          , taskParams        :: Maybe [(Text, Text)]
