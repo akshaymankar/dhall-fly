@@ -27,6 +27,7 @@ dependencies:
 - containers
 - dhall
 - dhall-json
+- either
 - scientific
 - template-haskell
 - text

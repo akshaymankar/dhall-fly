@@ -38,6 +38,12 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 # extra-deps: []
+extra-deps:
+- repline-0.2.1.0
+- th-lift-instances-0.1.13
+- th-lift-0.8.0.1
+- dhall-1.25.0
+- dhall-json-1.4.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

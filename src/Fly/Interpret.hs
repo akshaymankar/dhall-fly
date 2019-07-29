@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
@@ -5,18 +6,19 @@
 {-# LANGUAGE ViewPatterns      #-}
 module Fly.Interpret where
 
-import Data.Aeson          (Value (..))
-import Data.HashMap.Strict as M
+import Data.Aeson             (Value (..))
+import Data.Either.Validation
+import Data.HashMap.Strict    as M
 import Data.Scientific
-import Data.Text           (Text)
+import Data.Text              (Text, pack)
 import Dhall
-import Dhall.Core          (Chunks (..), Expr (..), Var (..))
-import Dhall.Map           (Map, fromList, lookup)
-import Dhall.Parser        (Src)
+import Dhall.Core             (Chunks (..), Expr (..), Var (..))
+import Dhall.Map              (Map, fromList, lookup)
+import Dhall.Parser           (Src)
 import Dhall.TH
-import Dhall.TypeCheck     (X)
-import Fly.Types           hiding (autoHooks, getVersion, resourceType,
-                            taskSpec)
+import Dhall.TypeCheck        (X)
+import Fly.Types              hiding (autoHooks, getVersion, resourceType,
+                               taskSpec)
 
 import qualified Data.Foldable as F
 import qualified Data.Sequence as S
@@ -29,10 +31,10 @@ assocList :: Type Value
 assocList = Type{..} where
   expected = [dhallExpr|List ./dhall-concourse/types/TextTextPair.dhall|]
   extract l@(ListLit _ _) = case Dhall.JSON.dhallToJSON (Dhall.JSON.convertToHomogeneousMaps c l) of
-                              Left _  -> Nothing
+                              Left e  -> extractError $ pack $ "dhall-to-json compile error: " ++ show e
                               Right v -> pure v
                             where c = Dhall.JSON.Conversion "mapKey" "mapValue"
-  extract _ = Nothing
+  extract t = typeError expected t
 
 textPair :: Type (Text, Text)
 textPair = Type{..} where
@@ -41,7 +43,7 @@ textPair = Type{..} where
                        <$> extractFromMap "mapKey" auto
                        <*> extractFromMap "mapValue" auto
                        where extractFromMap = withType m
-  extract _ = Nothing
+  extract t = typeError expected t
 
 instance Interpret Value where
   autoWith _ = Type{..} where
@@ -61,24 +63,27 @@ instance Interpret Value where
     extractJSONFromApps (App (Var (V "array" _)) a) = Array . V.fromList <$> Dhall.extract auto a
     extractJSONFromApps (App (Var (V "bool" _)) b) = Data.Aeson.Bool <$> Dhall.extract auto b
     extractJSONFromApps (Var (V "null" _)) = pure Null
-    extractJSONFromApps x = Nothing
+    extractJSONFromApps x = undefined
 
 instance Interpret (HashMap Text Value) where
   autoWith _ = Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/JSONObject.dhall|]
-    extract (ListLit _ x) = M.fromList <$> (Prelude.sequence $ Prelude.map extractPair (F.toList x))
+    extract (ListLit _ x) = M.fromList <$> (Prelude.sequenceA $ Prelude.map extractPair (F.toList x))
     extractPair (RecordLit m) = do
-      key <- Dhall.extract auto =<< (Dhall.Map.lookup "mapKey" m)
-      val <- Dhall.extract auto =<< (Dhall.Map.lookup "mapValue" m)
-      Just (key, val)
-    extractPair _ = Nothing
+      key <- withType m "mapKey" auto
+      val <- withType m "mapKey" auto
+      pure (key, val)
+    extractPair _ = extractError "expected record"
 
 instance Interpret ResourceType where
   autoWith _ = Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/ResourceType.dhall|]
+    extract (App (Field (Union _) "Custom") (RecordLit m)) = extractCustomResourceType m
+    extract (App (Field (Union _) "InBuilt") (TextLit (Chunks [] t))) = pure $ ResourceTypeInBuilt t
     extract (UnionLit "Custom" (RecordLit m) _) = extractCustomResourceType m
     extract (UnionLit "InBuilt" (TextLit (Chunks [] t)) _) = pure $ ResourceTypeInBuilt t
-    extract _ = Nothing
+
+    extract t = typeError expected t
     extractCustomResourceType m =
       ResourceTypeCustom
         <$> extractFromMap "name" auto
@@ -100,7 +105,7 @@ instance Interpret Resource where
       <*> extractFromMap "tags"          (Dhall.maybe $ list auto)
       <*> extractFromMap "webhook_token" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskRunConfig where
   autoWith _ = Type{..} where
@@ -112,7 +117,7 @@ instance Interpret TaskRunConfig where
       <*> extractFromMap "dir"  auto
       <*> extractFromMap "user" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskImageResource where
   autoWith _ = Type{..} where
@@ -124,7 +129,7 @@ instance Interpret TaskImageResource where
       <*> extractFromMap "params"  (Dhall.maybe assocList)
       <*> extractFromMap "version" (Dhall.maybe assocList)
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskInput where
   autoWith _ = Type{..} where
@@ -135,7 +140,7 @@ instance Interpret TaskInput where
       <*> extractFromMap "path" auto
       <*> extractFromMap "optional"  auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskOutput where
   autoWith _ = Type{..} where
@@ -145,7 +150,7 @@ instance Interpret TaskOutput where
       <$> extractFromMap "name" auto
       <*> extractFromMap "path" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskCache where
   autoWith _ = Type{..} where
@@ -154,7 +159,7 @@ instance Interpret TaskCache where
       TaskCache
       <$> extractFromMap "path" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskConfig where
   autoWith _ = Type{..} where
@@ -170,24 +175,33 @@ instance Interpret TaskConfig where
       <*> extractFromMap "caches" (Dhall.maybe $ list auto)
       <*> extractFromMap "params" (Dhall.maybe $ list textPair)
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret TaskSpec where
   autoWith _ = Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/TaskSpec.dhall|]
+    extract (App (Field (Union _) "Config") c) =  TaskSpecConfig <$> Dhall.extract auto c
+    extract (App (Field (Union _) "File") (TextLit (Chunks [] t))) =  pure $ TaskSpecFile t
     extract (UnionLit "Config" c _) = TaskSpecConfig <$> Dhall.extract auto c
     extract (UnionLit "File" (TextLit (Chunks [] t)) _) = pure $ TaskSpecFile t
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret GetVersion where
   autoWith _ = Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/GetVersion.dhall|]
+    extract (App (Field (Union _) "Latest") (TextLit _)) =  pure GetVersionLatest
+    extract (App (Field (Union _) "Every") (TextLit _)) =  pure GetVersionEvery
+    extract (App (Field (Union _) "SpecificVersion") l@(ListLit _ _)) =
+      case Dhall.JSON.dhallToJSON l of
+        Left e  -> extractError $ pack $ "dhall-to-json compile error: " ++ show e
+        Right v -> pure $ GetVersionSpecific v
     extract (UnionLit "Latest" (TextLit _) _) = pure GetVersionLatest
     extract (UnionLit "Every" (TextLit _) _) = pure GetVersionEvery
     extract (UnionLit "SpecificVersion" l@(ListLit _ _) _) =
       case Dhall.JSON.dhallToJSON l of
-          Left _  -> Nothing
-          Right v -> pure $ GetVersionSpecific v
+        Left e  -> extractError $ pack $ "dhall-to-json compile error: " ++ show e
+        Right v -> pure $ GetVersionSpecific v
+    extract t = typeError expected t
 
 instance Interpret GetStep where
   autoWith _ = Type{..} where
@@ -237,7 +251,7 @@ instance Interpret StepHooks where
       <*> extractFromMap "on_abort" auto
       <*> extractFromMap "ensure" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
 instance Interpret Step where
   autoWith _ = Type{..} where
@@ -251,13 +265,13 @@ instance Interpret Step where
                   (Lam _ _ -- TryStep
                    x))))))) = extractStepFromApps x
     extract x = extractStepFromApps x -- While recursing it loses all the `Lam`s
-    extractStepFromApps (App (App (Var (V "GetStep" _)) s) hooks) = buildStep Get s hooks
-    extractStepFromApps (App (App (Var (V "PutStep" _)) s) hooks) = buildStep Put s hooks
-    extractStepFromApps (App (App (Var (V "TaskStep" _)) s) hooks) = buildStep Task s hooks
-    extractStepFromApps (App (App (Var (V "AggregateStep" _)) s) hooks) = buildStep Aggregate s hooks
-    extractStepFromApps (App (App (Var (V "DoStep" _)) s) hooks) = buildStep Do s hooks
-    extractStepFromApps (App (App (Var (V "TryStep" _)) s) hooks) = buildStep Try s hooks
-    extractStepFromApps _ = Nothing
+    extractStepFromApps (App (App (Var (V _ 5)) s) hooks) = buildStep Get s hooks
+    extractStepFromApps (App (App (Var (V _ 4)) s) hooks) = buildStep Put s hooks
+    extractStepFromApps (App (App (Var (V _ 3)) s) hooks) = buildStep Task s hooks
+    extractStepFromApps (App (App (Var (V _ 2)) s) hooks) = buildStep Aggregate s hooks
+    extractStepFromApps (App (App (Var (V _ 1)) s) hooks) = buildStep Do s hooks
+    extractStepFromApps (App (App (Var (V _ 0)) s) hooks) = buildStep Try s hooks
+    extractStepFromApps t = typeError expected t
     buildStep f x y = f <$> Dhall.extract auto x <*> Dhall.extract auto y
 
 instance Interpret Job where
@@ -279,7 +293,9 @@ instance Interpret Job where
       <*> extractFromMap "on_abort" auto
       <*> extractFromMap "ensure" auto
       where extractFromMap = withType m
-    extract _ = Nothing
+    extract t = typeError expected t
 
-withType :: Map Text (Expr Src X) -> Text -> Type a -> Maybe a
-withType m key t = Dhall.extract t =<< Dhall.Map.lookup key m
+withType :: Map Text (Expr Src X) -> Text -> Type a -> Extractor Src X a
+withType m key t = case Dhall.Map.lookup key m of
+                     Nothing -> extractError $ "expected to find key: "  <> key
+                     Just x -> Dhall.extract t x
