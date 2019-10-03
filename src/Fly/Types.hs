@@ -16,7 +16,6 @@ import Data.Aeson.TH
 import Data.HashMap.Strict
 import Data.Maybe                       (fromMaybe)
 import Data.Scientific                  (fromFloatDigits)
-import Data.Text                        (Text)
 import Dhall
 import Dhall.Core
 import Dhall.Src
@@ -29,7 +28,6 @@ import qualified Data.HashMap.Strict as M
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Dhall.Map
-
 
 data CustomResourceType = CustomResourceType { crtName   :: Text
                                              , crtType   :: Text
@@ -200,16 +198,6 @@ data TaskStep = TaskStep { taskTask          :: Text
               deriving (Show, Generic, Eq)
               deriving Interpret via InterpretWithPrefix TaskStep
 
-instance {-# OVERLAPPING #-} ToJSON (HashMap Text Text) where
-  toJSON xs = object (toPairs $ M.toList xs)
-              where toPairs []                = []
-                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
-
-instance {-# OVERLAPPING #-} ToJSON (HashMap Text (Maybe Text)) where
-  toJSON xs = object (toPairs $ M.toList xs)
-              where toPairs []                = []
-                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
-
 instance ToJSON TaskStep where
   toJSON t@(TaskStep{..}) = case genericToJSON (aesonPrefix snakeCase) t of
                           Object o1 -> case toJSON taskConfig of
@@ -225,7 +213,6 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
           | Do { doSteps :: [Step], stepHooks :: StepHooks  }
           | Try { tryStep :: Step, stepHooks :: StepHooks  }
           deriving (Show, Generic, Eq)
-          -- deriving Interpret via InterpretWithPrefix Step
 
 instance Interpret Step where
   autoWith _ = Dhall.Type{..} where
@@ -357,6 +344,16 @@ instance Interpret (HashMap Text (Maybe Text)) where
       val <- withType m "mapValue" auto
       pure (key, val)
     extractPair _ = extractError "expected record"
+
+instance {-# OVERLAPPING #-} ToJSON (HashMap Text Text) where
+  toJSON xs = object (toPairs $ M.toList xs)
+              where toPairs []                = []
+                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
+
+instance {-# OVERLAPPING #-} ToJSON (HashMap Text (Maybe Text)) where
+  toJSON xs = object (toPairs $ M.toList xs)
+              where toPairs []                = []
+                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
 
 $(deriveToJSON (aesonPrefix snakeCase) ''CustomResourceType)
 $(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
