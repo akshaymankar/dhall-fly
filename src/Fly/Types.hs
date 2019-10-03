@@ -201,14 +201,14 @@ data TaskStep = TaskStep { taskTask          :: Text
               deriving Interpret via InterpretWithPrefix TaskStep
 
 instance {-# OVERLAPPING #-} ToJSON (HashMap Text Text) where
-  toJSON xs = object (pairs $ M.toList xs)
-              where pairs []                = []
-                    pairs ((key, value):xs) = (key .= value) : pairs xs
+  toJSON xs = object (toPairs $ M.toList xs)
+              where toPairs []                = []
+                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
 
 instance {-# OVERLAPPING #-} ToJSON (HashMap Text (Maybe Text)) where
-  toJSON xs = object (pairs $ M.toList xs)
-              where pairs []                = []
-                    pairs ((key, value):xs) = (key .= value) : pairs xs
+  toJSON xs = object (toPairs $ M.toList xs)
+              where toPairs []                = []
+                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
 
 instance ToJSON TaskStep where
   toJSON t@(TaskStep{..}) = case genericToJSON (aesonPrefix snakeCase) t of
