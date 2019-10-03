@@ -8,7 +8,6 @@ import Test.Hspec
 import Data.Aeson
 import Data.HashMap.Strict
 import Dhall
-import Fly.Interpret
 import Fly.Types
 
 spec :: Spec

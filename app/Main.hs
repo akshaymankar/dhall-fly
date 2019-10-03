@@ -4,7 +4,6 @@ module Main where
 import Data.Yaml     (encode)
 import Dhall         (auto, input)
 import Dhall.JSON    (omitNull)
-import Fly.Interpret
 import Fly.Types     (Job)
 import Fly.Yaml      (dhallToYaml)
 
