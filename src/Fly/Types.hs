@@ -202,7 +202,7 @@ instance ToJSON TaskStep where
   toJSON t@(TaskStep{..}) = case genericToJSON (aesonPrefix snakeCase) t of
                           Object o1 -> case toJSON taskConfig of
                                          Object o2 ->
-                                           Object ( (M.delete "spec" o1) `M.union` o2)
+                                           Object ( (M.delete "config" o1) `M.union` o2)
                                          v -> error ("Expected " ++ show v ++ "to be Object")
                           v -> error ("Expected " ++ show v ++ "to be Object")
 
