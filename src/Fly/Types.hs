@@ -39,13 +39,13 @@ data CustomResourceType = CustomResourceType { crtName   :: Text
                                              , crtUniqueVersionHistory :: Maybe Bool
                                              }
                     deriving (Show, Generic, Eq)
-                    deriving Interpret via InterpretWithPrefix CustomResourceType
+                    deriving FromDhall via FromDhallWithPrefix CustomResourceType
 
 data ResourceType = ResourceTypeInBuilt Text
                   | ResourceTypeCustom CustomResourceType
                     deriving (Show, Generic, Eq)
 
-instance Interpret ResourceType where
+instance FromDhall ResourceType where
   autoWith _ = Dhall.union ( ( ResourceTypeInBuilt <$> constructor "InBuilt" strictText)
                            <> ( ResourceTypeCustom <$> constructor "Custom" auto ))
 
@@ -59,7 +59,7 @@ data Resource = Resource { resourceName         :: Text
                          , resourceTags         :: Maybe [Text]
                          , resourceWebhookToken :: Maybe Text}
               deriving (Show, Generic, Eq)
-              deriving Interpret via InterpretWithPrefix Resource
+              deriving FromDhall via FromDhallWithPrefix Resource
 
 instance ToJSON Resource where
   toJSON x = case genericToJSON (aesonPrefix snakeCase) x of
@@ -75,7 +75,7 @@ data TaskRunConfig = TaskRunConfig { trcPath :: Text
                                    , trcUser :: Maybe Text
                                    }
                    deriving (Show, Generic, Eq)
-                   deriving Interpret via InterpretWithPrefix TaskRunConfig
+                   deriving FromDhall via FromDhallWithPrefix TaskRunConfig
 
 data TaskImageResource = TaskImageResource { tirType    :: Text
                                            , tirSource  :: Maybe (HashMap Text Value)
@@ -83,27 +83,27 @@ data TaskImageResource = TaskImageResource { tirType    :: Text
                                            , tirVersion :: Maybe (HashMap Text Text)
                                            }
                        deriving (Show, Generic, Eq)
-                       deriving Interpret via InterpretWithPrefix TaskImageResource
+                       deriving FromDhall via FromDhallWithPrefix TaskImageResource
 
 data TaskInput = TaskInput { tiName     :: Text
                            , tiPath     :: Maybe Text
                            , tiOptional :: Maybe Bool
                            }
                deriving (Show, Generic, Eq)
-               deriving Interpret via InterpretWithPrefix TaskInput
+               deriving FromDhall via FromDhallWithPrefix TaskInput
 
 data TaskOutput = TaskOutput { toName :: Text, toPath :: Maybe Text }
                 deriving (Show, Generic, Eq)
-                deriving Interpret via InterpretWithPrefix TaskOutput
+                deriving FromDhall via FromDhallWithPrefix TaskOutput
 
 data TaskCache = TaskCache { taskcachePath :: Text}
                deriving (Show, Generic, Eq)
-               deriving Interpret via InterpretWithPrefix TaskCache
+               deriving FromDhall via FromDhallWithPrefix TaskCache
 
 data TaskContainerLimits = TaskContainerLimits { tclCpu    :: Maybe Natural
                                                , tclMemory :: Maybe Natural}
                          deriving (Show, Generic, Eq)
-                         deriving Interpret via InterpretWithPrefix TaskContainerLimits
+                         deriving FromDhall via FromDhallWithPrefix TaskContainerLimits
 
 data TaskConfig = TaskConfig { tcPlatform        :: Text
                              , tcRun             :: TaskRunConfig
@@ -116,12 +116,12 @@ data TaskConfig = TaskConfig { tcPlatform        :: Text
                              , tcContainerLimits :: Maybe TaskContainerLimits
                              }
                 deriving (Show, Generic, Eq)
-                deriving Interpret via InterpretWithPrefix TaskConfig
+                deriving FromDhall via FromDhallWithPrefix TaskConfig
 
 data TaskSpec = TaskSpecFile Text | TaskSpecConfig TaskConfig
               deriving (Show, Generic, Eq)
 
-instance Interpret TaskSpec where
+instance FromDhall TaskSpec where
   autoWith _ = Dhall.union ((TaskSpecFile <$> constructor "File" strictText)
                            <> (TaskSpecConfig <$> constructor "Config" auto))
 
@@ -139,7 +139,7 @@ instance ToJSON GetVersion where
   toJSON GetVersionEvery        = String "every"
   toJSON (GetVersionSpecific v) = toJSON v
 
-instance Interpret GetVersion where
+instance FromDhall GetVersion where
   autoWith _ = Dhall.union ((GetVersionLatest <$ constructor "Latest" strictText)
                            <> (GetVersionEvery <$ constructor "Every" strictText)
                            <> (GetVersionSpecific <$> constructor "SpecificVersion" auto))
@@ -155,7 +155,7 @@ data GetStep = GetStep { getGet      :: Maybe Text
                        , getAttempts :: Maybe Natural
                        }
              deriving (Show, Generic, Eq)
-             deriving Interpret via InterpretWithPrefix GetStep
+             deriving FromDhall via FromDhallWithPrefix GetStep
 
 instance ToJSON GetStep where
   toJSON GetStep{..} = object [ "get"      .= fromMaybe (resourceName getResource) getGet
@@ -178,7 +178,7 @@ data PutStep = PutStep { putPut       :: Maybe Text
                        , putAttempts  :: Maybe Natural
                        }
              deriving (Show, Generic, Eq)
-             deriving Interpret via InterpretWithPrefix PutStep
+             deriving FromDhall via FromDhallWithPrefix PutStep
 
 instance ToJSON PutStep where
   toJSON PutStep{..} = object [ "put"        .= fromMaybe (resourceName putResource) putPut
@@ -196,7 +196,7 @@ data TaskStep = TaskStep { taskTask          :: Text
                          , taskOutputMapping :: Maybe (HashMap Text Text)
                          }
               deriving (Show, Generic, Eq)
-              deriving Interpret via InterpretWithPrefix TaskStep
+              deriving FromDhall via FromDhallWithPrefix TaskStep
 
 instance ToJSON TaskStep where
   toJSON t@(TaskStep{..}) = case genericToJSON (aesonPrefix snakeCase) t of
@@ -214,7 +214,7 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
           | Try { tryStep :: Step, stepHooks :: StepHooks  }
           deriving (Show, Generic, Eq)
 
-instance Interpret Step where
+instance FromDhall Step where
   autoWith _ = Dhall.Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/Step.dhall|]
     extract (Lam _ _ -- Step
@@ -256,13 +256,13 @@ data StepHooks = StepHooks { hookOnSuccess :: Maybe Step
                            , hookEnsure    :: Maybe Step
                            }
                deriving (Show, Generic, Eq)
-               deriving Interpret via InterpretWithPrefix StepHooks
+               deriving FromDhall via FromDhallWithPrefix StepHooks
 
 data JobBuildLogRetention = JobBuildLogRetention { jblrDays   :: Maybe Natural
                                                  , jblrBuilds :: Maybe Natural
                                                  }
                           deriving (Show, Generic, Eq)
-                          deriving Interpret via InterpretWithPrefix JobBuildLogRetention
+                          deriving FromDhall via FromDhallWithPrefix JobBuildLogRetention
 
 data Job = Job { jobName                 :: Text
                , jobOldName              :: Maybe Text
@@ -281,69 +281,33 @@ data Job = Job { jobName                 :: Text
                , jobEnsure               :: Maybe Step
                }
          deriving (Show, Generic, Eq)
-         deriving Interpret via InterpretWithPrefix Job
+         deriving FromDhall via FromDhallWithPrefix Job
 
-newtype InterpretWithPrefix a = InterpretWithPrefix a
+newtype FromDhallWithPrefix a = FromDhallWithPrefix a
 
-instance (Generic a, GenericInterpret (Rep a)) => Interpret (InterpretWithPrefix a) where
+instance (Generic a, GenericFromDhall (Rep a)) => FromDhall (FromDhallWithPrefix a) where
   autoWith opts =
     let modifier = T.pack . (fieldLabelModifier $ aesonPrefix snakeCase) . T.unpack
-    in InterpretWithPrefix <$> fmap GHC.Generics.to (evalState (genericAutoWith opts{fieldModifier = modifier}) 1)
+    in FromDhallWithPrefix <$> fmap GHC.Generics.to (evalState (genericAutoWith opts{fieldModifier = modifier}) 1)
 
 withType :: Dhall.Map.Map Text (Expr Src X) -> Text -> Type a -> Dhall.Extractor Src X a
 withType m key t = case Dhall.Map.lookup key m of
                      Nothing -> extractError $ "expected to find key: "  <> key
                      Just x -> Dhall.extract t x
 
-instance Interpret Value where
+instance FromDhall Value where
   autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|./dhall-concourse/lib/prelude-json.dhall|]
+    expected = [dhallExpr|let Prelude = ./dhall-concourse/lib/prelude.dhall in Prelude.JSON.Type|]
     extract (Lam _ (Const Dhall.Core.Type)
               (Lam _ _ x)) = extractJSONFromApps x
     extract x = extractJSONFromApps x
     extractJSONFromApps (App (Field (Var (V _ 0)) "bool") (BoolLit b)) = pure $ Data.Aeson.Bool b
     extractJSONFromApps (App (Field (Var (V _ 0)) "string") (TextLit (Chunks _ t))) = pure $ String t
-    extractJSONFromApps (App (Field (Var (V _ 0)) "number") (DoubleLit n)) = pure $ Number $ fromFloatDigits n
+    extractJSONFromApps (App (Field (Var (V _ 0)) "number") (DoubleLit n)) = pure $ Number $ fromFloatDigits $ getDhallDouble n
     extractJSONFromApps (App (Field (Var (V _ 0)) "object") o) = Object <$> Dhall.extract auto o
     extractJSONFromApps (App (Field (Var (V _ 0)) "array") a) = Array . V.fromList <$> Dhall.extract auto a
     extractJSONFromApps (Field (Var (V _ 0)) "null") = pure Null
     extractJSONFromApps t = typeError expected t
-
-instance Interpret (HashMap Text Value) where
-  autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|./dhall-concourse/types/JSONObject.dhall|]
-    extract (ListLit _ x) =
-      M.fromList <$> (Prelude.sequenceA $ F.toList $ fmap extractPair x)
-    extract t = typeError expected t
-    extractPair (RecordLit m) = do
-      key <- withType m "mapKey" auto
-      val <- withType m "mapValue" auto
-      pure (key, val)
-    extractPair _ = extractError "expected record"
-
-instance Interpret (HashMap Text Text) where
-  autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|List ./dhall-concourse/types/TextTextPair.dhall|]
-    extract (ListLit _ x) =
-      M.fromList <$> (Prelude.sequenceA $ F.toList $ fmap extractPair x)
-    extract t = typeError expected t
-    extractPair (RecordLit m) = do
-      key <- withType m "mapKey" auto
-      val <- withType m "mapValue" auto
-      pure (key, val)
-    extractPair _ = extractError "expected record"
-
-instance Interpret (HashMap Text (Maybe Text)) where
-  autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|List { mapKey : Text, mapValue : Optional Text }|]
-    extract (ListLit _ x) =
-      M.fromList <$> (Prelude.sequenceA $ F.toList $ fmap extractPair x)
-    extract t = typeError expected t
-    extractPair (RecordLit m) = do
-      key <- withType m "mapKey" auto
-      val <- withType m "mapValue" auto
-      pure (key, val)
-    extractPair _ = extractError "expected record"
 
 instance {-# OVERLAPPING #-} ToJSON (HashMap Text Text) where
   toJSON xs = object (toPairs $ M.toList xs)
