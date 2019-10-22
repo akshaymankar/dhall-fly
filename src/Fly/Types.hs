@@ -206,10 +206,30 @@ instance ToJSON TaskStep where
                                          v -> error ("Expected " ++ show v ++ "to be Object")
                           v -> error ("Expected " ++ show v ++ "to be Object")
 
+data InParallelStep = InParallelSteps {ipSteps  :: [Step]}
+                    | InParallelStepConfig {ipConfig :: InParallelConfig}
+                    deriving (Show, Generic, Eq)
+
+instance ToJSON InParallelStep where
+  toJSON (InParallelSteps steps) = toJSON steps
+  toJSON (InParallelStepConfig cfg)  = toJSON cfg
+
+instance FromDhall InParallelStep where
+  autoWith _ = Dhall.union ((InParallelSteps <$> constructor "Steps" auto)
+                           <> (InParallelStepConfig <$> constructor "Config" auto))
+
+data InParallelConfig = InParallelConfig { ipcSteps    :: [Step]
+                                         , ipcLimit    :: Maybe Natural
+                                         , ipcFailFast :: Maybe Bool
+                                         }
+                      deriving (Show, Generic, Eq)
+                      deriving FromDhall via FromDhallWithPrefix InParallelConfig
+
 data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
           | Put { stepPut :: PutStep, stepHooks :: StepHooks }
           | Task { stepTask :: TaskStep, stepHooks :: StepHooks }
           | Aggregate { aggregatedSteps :: [Step], stepHooks :: StepHooks }
+          | InParallel { stepInParallel :: InParallelStep, stepHooks :: StepHooks }
           | Do { doSteps :: [Step], stepHooks :: StepHooks  }
           | Try { tryStep :: Step, stepHooks :: StepHooks  }
           deriving (Show, Generic, Eq)
@@ -217,22 +237,21 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
 instance FromDhall Step where
   autoWith _ = Dhall.Type{..} where
     expected = [dhallExpr|./dhall-concourse/types/Step.dhall|]
-    extract (Lam _ _ -- Step
-             (Lam _ _ -- GetStep
-              (Lam _ _ -- PutStep
-               (Lam _ _ -- TaskStep
-                (Lam _ _ -- AggregateStep
-                 (Lam _ _ -- DoStep
-                  (Lam _ _ -- TryStep
-                   x))))))) = extractStepFromApps x
-    extract x = extractStepFromApps x -- While recursing it loses all the `Lam`s
-    extractStepFromApps (App (App (Var (V _ 5)) s) hooks) = buildStep Get s hooks
-    extractStepFromApps (App (App (Var (V _ 4)) s) hooks) = buildStep Put s hooks
-    extractStepFromApps (App (App (Var (V _ 3)) s) hooks) = buildStep Task s hooks
-    extractStepFromApps (App (App (Var (V _ 2)) s) hooks) = buildStep Aggregate s hooks
-    extractStepFromApps (App (App (Var (V _ 1)) s) hooks) = buildStep Do s hooks
-    extractStepFromApps (App (App (Var (V _ 0)) s) hooks) = buildStep Try s hooks
-    extractStepFromApps t = typeError expected t
+    extract (Lam _ _ --Step
+             (Lam _ _ --Constructors
+              c)) = extractStepFromConstructors c
+    extract x = extractStepFromConstructors x -- While recursing, only the constructor applications are available
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "get") s) hooks)       = buildStep Get s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "put") s) hooks)       = buildStep Put s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "task") s) hooks)      = buildStep Task s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "aggregate") s) hooks) = buildStep Aggregate s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "do") s) hooks)        = buildStep Do s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "try") s) hooks)       = buildStep Try s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "in_parallel")
+                                          (App (Field (Union _) "Steps") s)) hooks)   = buildStep (InParallel . InParallelSteps ) s hooks
+    extractStepFromConstructors (App (App (Field (Var (V _ 0)) "in_parallel")
+                                          (App (Field (Union _) "Config") s)) hooks)  = buildStep (InParallel . InParallelStepConfig ) s hooks
+    extractStepFromConstructors t = typeError expected t
     buildStep f x y = f <$> Dhall.extract auto x <*> Dhall.extract auto y
 
 mergeHooks :: ToJSON a => a -> StepHooks -> Value
@@ -249,6 +268,7 @@ instance ToJSON Step where
   toJSON (Aggregate steps h) = mergeHooks (object ["aggregate" .= steps]) h
   toJSON (Do steps h)        = mergeHooks (object ["do" .= steps]) h
   toJSON (Try step h)        = mergeHooks (object ["try" .= step]) h
+  toJSON (InParallel cfg h)  = mergeHooks (object ["in_parallel" .= cfg]) h
 
 data StepHooks = StepHooks { hookOnSuccess :: Maybe Step
                            , hookOnFailure :: Maybe Step
@@ -328,6 +348,7 @@ $(deriveToJSON (aesonPrefix snakeCase) ''TaskOutput)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskCache)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskConfig)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskContainerLimits)
+$(deriveToJSON (aesonPrefix snakeCase) ''InParallelConfig)
 $(deriveToJSON (aesonPrefix snakeCase) ''StepHooks)
 $(deriveToJSON (aesonPrefix snakeCase) ''JobBuildLogRetention)
 $(deriveToJSON (aesonPrefix snakeCase) ''Job)

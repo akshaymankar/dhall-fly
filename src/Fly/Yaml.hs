@@ -27,6 +27,8 @@ getResourcesFromStep s =
     stepResources (Aggregate steps _)   = concatMap getResourcesFromStep steps
     stepResources (Do steps _)          = concatMap getResourcesFromStep steps
     stepResources (Try step _)          = getResourcesFromStep step
+    stepResources (InParallel (InParallelSteps steps) _)   = concatMap getResourcesFromStep steps
+    stepResources (InParallel (InParallelStepConfig(InParallelConfig{..})) _)   = concatMap getResourcesFromStep ipcSteps
 
 getResourcesFromJob :: Job -> [Resource]
 getResourcesFromJob Job{..} = concatMap getResourcesFromStep jobPlan
