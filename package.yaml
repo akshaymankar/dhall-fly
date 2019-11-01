@@ -25,7 +25,7 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - containers
-- dhall
+- dhall >= 1.27
 - dhall-json
 - either
 - scientific
@@ -62,3 +62,5 @@ tests:
     dependencies:
     - dhall-fly
     - hspec
+    build-tools:
+    - hspec-discover

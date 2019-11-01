@@ -1,4 +1,4 @@
 .stack-work/
-dhall-fly.cabal
 *~
 .dir-locals.el
+dhall-fly.cabal
