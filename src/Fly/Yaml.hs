@@ -31,7 +31,7 @@ getResourcesFromStep s =
     stepResources (InParallel (InParallelStepConfig(InParallelConfig{..})) _)   = concatMap getResourcesFromStep ipcSteps
 
 getResourcesFromJob :: Job -> [Resource]
-getResourcesFromJob Job{..} = concatMap getResourcesFromStep jobPlan
+getResourcesFromJob Job{..} = concatMap getResourcesFromStep (jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ])
 
 dhallToYaml :: [Job] -> Value
 dhallToYaml jobs =
