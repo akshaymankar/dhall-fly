@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c4254a7196674c29d471f37e1dc002b5220462c27c0ed61a716ec38755696f37
+-- hash: 7c50ef3aafe033656a5e62eae0f7db16d5bbfc89e49fe9d78892dadd474a7a04
 
 name:           dhall-fly
 version:        0.1.0.0
@@ -87,6 +87,8 @@ test-suite dhall-fly-test
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:
+      hspec-discover:hspec-discover
   build-depends:
       aeson
     , aeson-casing

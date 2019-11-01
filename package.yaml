@@ -62,3 +62,5 @@ tests:
     dependencies:
     - dhall-fly
     - hspec
+    build-tools:
+    - hspec-discover
