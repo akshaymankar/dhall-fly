@@ -25,6 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         cabal v2-update
+        export PATH=$HOME/.cabal/bin:$PATH
         cabal configure --enable-tests -j2
         cabal v2-build --only-dependencies
 
