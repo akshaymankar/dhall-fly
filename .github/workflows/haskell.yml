@@ -19,10 +19,12 @@ jobs:
     - name: Install dependencies
       run: |
         cabal v2-update
-        cabal v2-install --only-dependencies --enable-tests
+        cabal configure --enable-tests -j2
+        cabal v2-build --only-dependencies
+
     - name: Build
       run: |
-        cabal configure --enable-tests
         cabal v2-build
+
     - name: Run tests
-      run: cabal v2-test
+      run: cabal v2-run test
