@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6829481ee742de85deeba3d8ad44af604f3c9acca33649ba51ea1cef4afefffd
+-- hash: c4254a7196674c29d471f37e1dc002b5220462c27c0ed61a716ec38755696f37
 
 name:           dhall-fly
 version:        0.1.0.0
@@ -40,7 +40,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
-    , dhall
+    , dhall >=1.27
     , dhall-json
     , either
     , scientific
@@ -65,7 +65,7 @@ executable dhall-fly
     , base >=4.7 && <5
     , bytestring
     , containers
-    , dhall
+    , dhall >=1.27
     , dhall-fly
     , dhall-json
     , either
@@ -93,7 +93,7 @@ test-suite dhall-fly-test
     , base >=4.7 && <5
     , bytestring
     , containers
-    , dhall
+    , dhall >=1.27
     , dhall-fly
     , dhall-json
     , either
