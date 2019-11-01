@@ -18,9 +18,9 @@ jobs:
         cabal-version: ${{matrix.cabal}}
     - name: Install dependencies
       run: |
+        cabal v2-update
         cabal v2-install hpack
         hpack
-        cabal v2-update
         cabal v2-install --only-dependencies --enable-tests
     - name: Build
       run: |
