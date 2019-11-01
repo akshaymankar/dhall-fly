@@ -20,7 +20,7 @@ jobs:
       run: |
         cabal v2-update
         cabal v2-install hpack
-        hpack
+        ~/.cabal/bin/hpack
         cabal v2-install --only-dependencies --enable-tests
     - name: Build
       run: |
