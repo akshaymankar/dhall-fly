@@ -12,6 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+      with:
+        submodules: recursive
     - uses: actions/setup-haskell@v1
       with:
         ghc-version: ${{matrix.ghc}}
