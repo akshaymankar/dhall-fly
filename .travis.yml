@@ -12,6 +12,8 @@ matrix:
 
 before_install:
 - curl -sSL https://get.haskellstack.org/ | sh
+- git submodule sync
+- git submodule update --init
 
 install:
 - stack setup --no-terminal
