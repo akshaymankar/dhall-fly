@@ -19,11 +19,11 @@ jobs:
 
     - run:
         name: Stack setup
-        command: stack setup
+        command: stack setup --no-terminal
 
     - run:
         name: Compile
-        command: stack test --no-run-tests -j 2
+        command: stack test --no-terminal --no-run-tests -j 2
 
     - save_cache:
         key: stack-{{ checksum "resolver.txt" }}
@@ -37,7 +37,7 @@ jobs:
 
     - run:
         name: Run Tests
-        command: stack test
+        command: stack test --no-terminal
 
 workflows:
   version: 2
