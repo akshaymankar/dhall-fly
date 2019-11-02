@@ -1,0 +1,46 @@
+version: 2
+jobs:
+  build-haskell:
+    docker:
+    - image: quay.io/haskell_works/stack-build-icu:latest
+    steps:
+    - checkout
+    - run:
+        name: Get resolver version
+        command: grep '^resolver' stack.yaml | awk '{print $2}' > resolver.txt
+
+    - restore_cache:
+        keys:
+        - stack-{{ checksum "resolver.txt" }}
+
+    - restore_cache:
+        keys:
+        - stack-work-{{ checksum "resolver.txt" }}-{{ checksum "stack.yaml" }}
+
+    - run:
+        name: Stack setup
+        command: stack setup
+
+    - run:
+        name: Compile
+        command: stack test --no-run-tests -j 2
+
+    - save_cache:
+        key: stack-{{ checksum "resolver.txt" }}
+        paths:
+          - ~/.stack
+
+    - save_cache:
+        key: stack-work-{{ checksum "resolver.txt" }}-{{ checksum "stack.yaml" }}
+        paths:
+          - .stack-work
+
+    - run:
+        name: Run Tests
+        command: stack test
+
+workflows:
+  version: 2
+  build:
+    jobs:
+    - build-haskell
