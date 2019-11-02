@@ -19,7 +19,8 @@ script:
 - stack test --no-terminal
 - stack build --copy-bins --local-bin-path ./bin
 - |
-  mv ./bin/dhall-fly "./bin/dhall-fly-$(uname -s | tr '[:upper:]' '[:lower:]')"
+  mkdir -p uploads
+  tar -czvf uploads/dhall-fly-$TRAVIS_TAG.tgz bin/dhall-fly
 
 deploy:
   provider: releases
@@ -27,7 +28,7 @@ deploy:
   draft: true
   api_key:
     secure: arQb7Hlsw7Gy/LeXngYziFt2whexwKxomKsEX2POjTdSbbCpsqo5rh90XUd5+k5eEsQNdQ5Ck4lG7Du7ufOBOhNbDW34siWXbTnl8J9Wa2iC99D9RbNSsFAUorHCcDm5pE4h99fBynR+frUDB/Rm15Rc9Nd21yZkG/0bHD6HdXzfBq36QrN0VDVxWfeiST+ErxINxdNx8GAzFdgg5uh54xnFlOBjDahAzdN/hTkdE+28pW9imu8QABHiXpNLpBmgiyma97Zt7XmhErZfwhhCiANn7lLe8Pazdoq9gQIzbTihunYWFtPdL84LUVJyPSe2qolQs0zWf9UpSlV3+bKEewOFyED8Mr79lshAlZW99kC4Z7VcM70VnR23YZe6zWAIUHJUPObspvI8kO1YTAmo+9Hyk044AcRPuGbUqrejCgMBJ8IpM0E4SSkrCY7fzOlrsEVf3r3oVLKOKDFLkTBY57ECaRf8bKHKh1HbhXC7a9iJyXPk6I1VcD00fkPyeIZITsgP+K4DKRRmf3oRYddE+QVJ8YmLlnE72NBXV2SESSiU4bnrwFXEDjpvb834UKgXm++wJt3K2JKdgZlYZHAXfyayz4DUvnRXPvjfyJPZ3XJH1r2pu9L3+ALaeB4YLWc/zGNUiKgktRbD5g5xdMt5kAydCdIRAcJ6Y9XYZJtMfZw=
-  file: bin/*
+  file: uploads/*
   file_glob: true
   on:
     tags: true
