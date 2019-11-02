@@ -17,9 +17,9 @@ jobs:
       with:
         submodules: recursive
 
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: "8.6.5"
+    - name: Install stack
+      run: |
+        curl -sSL https://get.haskellstack.org/ | sh
 
     - name: Install dependencies
       run: |
