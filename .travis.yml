@@ -20,7 +20,8 @@ script:
 - stack build --copy-bins --local-bin-path ./bin
 - |
   mkdir -p uploads
-  tar -czvf uploads/dhall-fly-$TRAVIS_TAG.tgz bin/dhall-fly
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  tar -czvf "uploads/dhall-fly-$TRAVIS_TAG-$os.tgz" bin/dhall-fly
 
 deploy:
   provider: releases
