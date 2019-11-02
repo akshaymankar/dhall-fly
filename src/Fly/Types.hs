@@ -210,6 +210,10 @@ data InParallelStep = InParallelSteps {ipSteps  :: [Step]}
                     | InParallelStepConfig {ipConfig :: InParallelConfig}
                     deriving (Show, Generic, Eq)
 
+inParallelSteps :: InParallelStep -> [Step]
+inParallelSteps (InParallelSteps steps ) = steps
+inParallelSteps (InParallelStepConfig InParallelConfig{..}) = ipcSteps
+
 instance ToJSON InParallelStep where
   toJSON (InParallelSteps steps) = toJSON steps
   toJSON (InParallelStepConfig cfg)  = toJSON cfg

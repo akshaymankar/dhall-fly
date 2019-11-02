@@ -3,9 +3,9 @@
 module Fly.Yaml where
 
 import Data.Aeson
+import Data.List  (nub)
 import Data.Maybe (catMaybes)
 import Fly.Types
-import Data.List (nub)
 
 customResourceTypes :: [ResourceType] -> [ResourceType]
 customResourceTypes [] = []
@@ -19,19 +19,23 @@ getResourcesFromHooks StepHooks{..} =
 
 getResourcesFromStep :: Step -> [Resource]
 getResourcesFromStep s =
-  stepResources s ++ (getResourcesFromHooks $ Fly.Types.stepHooks s)
+  stepResources s ++ getResourcesFromHooks (Fly.Types.stepHooks s)
   where
-    stepResources (Get (GetStep{..}) _) = [getResource]
-    stepResources (Put (PutStep{..}) _) = [putResource]
+    stepResources (Get GetStep{..} _)   = [getResource]
+    stepResources (Put PutStep{..} _)   = [putResource]
     stepResources (Task _ _)            = []
-    stepResources (Aggregate steps _)   = concatMap getResourcesFromStep steps
-    stepResources (Do steps _)          = concatMap getResourcesFromStep steps
+    stepResources (Aggregate steps _)   = getResourcesFromSteps steps
+    stepResources (Do steps _)          = getResourcesFromSteps steps
     stepResources (Try step _)          = getResourcesFromStep step
-    stepResources (InParallel (InParallelSteps steps) _)   = concatMap getResourcesFromStep steps
-    stepResources (InParallel (InParallelStepConfig(InParallelConfig{..})) _)   = concatMap getResourcesFromStep ipcSteps
+    stepResources (InParallel inParallel _) =
+       getResourcesFromSteps $ inParallelSteps inParallel
+
+getResourcesFromSteps :: [Step] -> [Resource]
+getResourcesFromSteps = concatMap getResourcesFromStep
 
 getResourcesFromJob :: Job -> [Resource]
-getResourcesFromJob Job{..} = concatMap getResourcesFromStep (jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ])
+getResourcesFromJob Job{..} =
+  getResourcesFromSteps $ jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ]
 
 dhallToYaml :: [Job] -> Value
 dhallToYaml jobs =
