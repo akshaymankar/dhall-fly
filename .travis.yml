@@ -1,0 +1,22 @@
+language: generic
+
+cache:
+  directories:
+  - $HOME/.stack
+  - $TRAVIS_BUILD_DIR/.stack-work
+matrix:
+  include:
+  - os: linux
+  - os: osx
+  - os: windows
+
+before_install:
+- curl -sSL https://get.haskellstack.org/ | sh
+
+install:
+- stack setup --no-terminal
+- stack build --test --no-terminal --no-run-tests --only-dependencies -j 2
+
+script:
+- stack build --no-terminal
+- stack test --no-terminal
