@@ -20,8 +20,8 @@ import Dhall
 import Dhall.Core
 import Dhall.Src
 import Dhall.TH
-import Dhall.TypeCheck                  (X)
 import GHC.Generics
+import Data.Void
 
 import qualified Data.Foldable       as F
 import qualified Data.HashMap.Strict as M
@@ -96,9 +96,9 @@ data TaskOutput = TaskOutput { toName :: Text, toPath :: Maybe Text }
                 deriving (Show, Generic, Eq)
                 deriving FromDhall via FromDhallWithPrefix TaskOutput
 
-data TaskCache = TaskCache { taskcachePath :: Text}
-               deriving (Show, Generic, Eq)
-               deriving FromDhall via FromDhallWithPrefix TaskCache
+newtype TaskCache = TaskCache { taskcachePath :: Text}
+                  deriving (Show, Generic, Eq)
+                  deriving FromDhall via FromDhallWithPrefix TaskCache
 
 data TaskContainerLimits = TaskContainerLimits { tclCpu    :: Maybe Natural
                                                , tclMemory :: Maybe Natural}
@@ -159,7 +159,7 @@ data GetStep = GetStep { getGet      :: Maybe Text
 
 instance ToJSON GetStep where
   toJSON GetStep{..} = object [ "get"      .= fromMaybe (resourceName getResource) getGet
-                              , "resource" .= toJSON ((resourceName getResource) <$ getGet)
+                              , "resource" .= toJSON (resourceName getResource <$ getGet)
                               , "params"   .= getParams
                               , "version"  .= getVersion
                               , "passed"   .= getPassed
@@ -182,7 +182,7 @@ data PutStep = PutStep { putPut       :: Maybe Text
 
 instance ToJSON PutStep where
   toJSON PutStep{..} = object [ "put"        .= fromMaybe (resourceName putResource) putPut
-                              , "resource"   .= toJSON ((resourceName putResource) <$ putPut)
+                              , "resource"   .= toJSON (resourceName putResource <$ putPut)
                               , "params"     .= putParams
                               , "get_params" .= putGetParams
                               ]
@@ -199,12 +199,13 @@ data TaskStep = TaskStep { taskTask          :: Text
               deriving FromDhall via FromDhallWithPrefix TaskStep
 
 instance ToJSON TaskStep where
-  toJSON t@(TaskStep{..}) = case genericToJSON (aesonPrefix snakeCase) t of
-                          Object o1 -> case toJSON taskConfig of
-                                         Object o2 ->
-                                           Object ( (M.delete "config" o1) `M.union` o2)
-                                         v -> error ("Expected " ++ show v ++ "to be Object")
-                          v -> error ("Expected " ++ show v ++ "to be Object")
+  toJSON t@TaskStep{..} =
+    case genericToJSON (aesonPrefix snakeCase) t of
+      Object o1 ->
+        case toJSON taskConfig of
+          Object o2 -> Object (M.delete "config" o1 `M.union` o2)
+          v         -> error ("Expected " ++ show v ++ "to be Object")
+      v -> error ("Expected " ++ show v ++ "to be Object")
 
 data InParallelStep = InParallelSteps {ipSteps  :: [Step]}
                     | InParallelStepConfig {ipConfig :: InParallelConfig}
@@ -240,7 +241,7 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
 
 instance FromDhall Step where
   autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|./dhall-concourse/types/Step.dhall|]
+    expected = $(staticDhallExpression "./dhall-concourse/types/Step.dhall")
     extract (Lam _ _ --Step
              (Lam _ _ --Constructors
               c)) = extractStepFromConstructors c
@@ -311,17 +312,17 @@ newtype FromDhallWithPrefix a = FromDhallWithPrefix a
 
 instance (Generic a, GenericFromDhall (Rep a)) => FromDhall (FromDhallWithPrefix a) where
   autoWith opts =
-    let modifier = T.pack . (fieldLabelModifier $ aesonPrefix snakeCase) . T.unpack
+    let modifier = T.pack . fieldLabelModifier (aesonPrefix snakeCase) . T.unpack
     in FromDhallWithPrefix <$> fmap GHC.Generics.to (evalState (genericAutoWith opts{fieldModifier = modifier}) 1)
 
-withType :: Dhall.Map.Map Text (Expr Src X) -> Text -> Type a -> Dhall.Extractor Src X a
+withType :: Dhall.Map.Map Text (Expr Src Void) -> Text -> Type a -> Dhall.Extractor Src Void a
 withType m key t = case Dhall.Map.lookup key m of
                      Nothing -> extractError $ "expected to find key: "  <> key
                      Just x -> Dhall.extract t x
 
 instance FromDhall Value where
   autoWith _ = Dhall.Type{..} where
-    expected = [dhallExpr|let Prelude = ./dhall-concourse/lib/prelude.dhall in Prelude.JSON.Type|]
+    expected = $(staticDhallExpression "let Prelude = ./dhall-concourse/lib/prelude.dhall in Prelude.JSON.Type")
     extract (Lam _ (Const Dhall.Core.Type)
               (Lam _ _ x)) = extractJSONFromApps x
     extract x = extractJSONFromApps x

@@ -35,7 +35,8 @@ getResourcesFromSteps = concatMap getResourcesFromStep
 
 getResourcesFromJob :: Job -> [Resource]
 getResourcesFromJob Job{..} =
-  getResourcesFromSteps $ jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ]
+  getResourcesFromSteps
+  $ jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ]
 
 dhallToYaml :: [Job] -> Value
 dhallToYaml jobs =
