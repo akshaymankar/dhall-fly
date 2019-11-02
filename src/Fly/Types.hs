@@ -9,25 +9,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Fly.Types where
 
-import Control.Monad.Trans.State.Strict
-import Data.Aeson                       hiding (Result)
+import Data.Aeson                   hiding (Result)
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.HashMap.Strict
-import Data.Maybe                       (fromMaybe)
-import Data.Scientific                  (fromFloatDigits)
+import Data.Maybe                   (fromMaybe)
 import Dhall
 import Dhall.Core
-import Dhall.Src
 import Dhall.TH
-import GHC.Generics
-import Data.Void
+import Fly.Internal.AesonOrphans    ()
+import Fly.Internal.DhallOrphans    ()
+import Fly.Internal.DhallWithPrefix
 
-import qualified Data.Foldable       as F
 import qualified Data.HashMap.Strict as M
-import qualified Data.Text           as T
-import qualified Data.Vector         as V
-import qualified Dhall.Map
 
 data CustomResourceType = CustomResourceType { crtName   :: Text
                                              , crtType   :: Text
@@ -212,12 +206,12 @@ data InParallelStep = InParallelSteps {ipSteps  :: [Step]}
                     deriving (Show, Generic, Eq)
 
 inParallelSteps :: InParallelStep -> [Step]
-inParallelSteps (InParallelSteps steps ) = steps
+inParallelSteps (InParallelSteps steps )                    = steps
 inParallelSteps (InParallelStepConfig InParallelConfig{..}) = ipcSteps
 
 instance ToJSON InParallelStep where
-  toJSON (InParallelSteps steps) = toJSON steps
-  toJSON (InParallelStepConfig cfg)  = toJSON cfg
+  toJSON (InParallelSteps steps)    = toJSON steps
+  toJSON (InParallelStepConfig cfg) = toJSON cfg
 
 instance FromDhall InParallelStep where
   autoWith _ = Dhall.union ((InParallelSteps <$> constructor "Steps" auto)
@@ -307,42 +301,6 @@ data Job = Job { jobName                 :: Text
                }
          deriving (Show, Generic, Eq)
          deriving FromDhall via FromDhallWithPrefix Job
-
-newtype FromDhallWithPrefix a = FromDhallWithPrefix a
-
-instance (Generic a, GenericFromDhall (Rep a)) => FromDhall (FromDhallWithPrefix a) where
-  autoWith opts =
-    let modifier = T.pack . fieldLabelModifier (aesonPrefix snakeCase) . T.unpack
-    in FromDhallWithPrefix <$> fmap GHC.Generics.to (evalState (genericAutoWith opts{fieldModifier = modifier}) 1)
-
-withType :: Dhall.Map.Map Text (Expr Src Void) -> Text -> Type a -> Dhall.Extractor Src Void a
-withType m key t = case Dhall.Map.lookup key m of
-                     Nothing -> extractError $ "expected to find key: "  <> key
-                     Just x -> Dhall.extract t x
-
-instance FromDhall Value where
-  autoWith _ = Dhall.Type{..} where
-    expected = $(staticDhallExpression "let Prelude = ./dhall-concourse/lib/prelude.dhall in Prelude.JSON.Type")
-    extract (Lam _ (Const Dhall.Core.Type)
-              (Lam _ _ x)) = extractJSONFromApps x
-    extract x = extractJSONFromApps x
-    extractJSONFromApps (App (Field (Var (V _ 0)) "bool") (BoolLit b)) = pure $ Data.Aeson.Bool b
-    extractJSONFromApps (App (Field (Var (V _ 0)) "string") (TextLit (Chunks _ t))) = pure $ String t
-    extractJSONFromApps (App (Field (Var (V _ 0)) "number") (DoubleLit n)) = pure $ Number $ fromFloatDigits $ getDhallDouble n
-    extractJSONFromApps (App (Field (Var (V _ 0)) "object") o) = Object <$> Dhall.extract auto o
-    extractJSONFromApps (App (Field (Var (V _ 0)) "array") a) = Array . V.fromList <$> Dhall.extract auto a
-    extractJSONFromApps (Field (Var (V _ 0)) "null") = pure Null
-    extractJSONFromApps t = typeError expected t
-
-instance {-# OVERLAPPING #-} ToJSON (HashMap Text Text) where
-  toJSON xs = object (toPairs $ M.toList xs)
-              where toPairs []                = []
-                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
-
-instance {-# OVERLAPPING #-} ToJSON (HashMap Text (Maybe Text)) where
-  toJSON xs = object (toPairs $ M.toList xs)
-              where toPairs []                = []
-                    toPairs ((key, value):xs) = (key .= value) : toPairs xs
 
 $(deriveToJSON (aesonPrefix snakeCase) ''CustomResourceType)
 $(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
