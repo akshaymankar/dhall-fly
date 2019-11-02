@@ -8,7 +8,6 @@ matrix:
   include:
   - os: linux
   - os: osx
-  - os: windows
 
 before_install:
 - curl -sSL https://get.haskellstack.org/ | sh
