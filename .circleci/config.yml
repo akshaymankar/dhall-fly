@@ -5,6 +5,8 @@ jobs:
     - image: quay.io/haskell_works/stack-build-icu:latest
     steps:
     - checkout
+    - run: git submodule sync
+    - run: git submodule update --init
     - run:
         name: Get resolver version
         command: grep '^resolver' stack.yaml | awk '{print $2}' > resolver.txt
