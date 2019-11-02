@@ -7,11 +7,10 @@ jobs:
     strategy:
       matrix:
         platform:
-        - ubuntu-latest
         - windows-latest
-        - macos-latest
+        - osx-latest
 
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.platform}}
 
     steps:
     - uses: actions/checkout@v1
