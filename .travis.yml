@@ -31,3 +31,4 @@ deploy:
   file_glob: true
   on:
     tags: true
+    condition: $TRAVIS_OS_NAME == osx
