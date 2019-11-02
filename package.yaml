@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/aksh
 dependencies:
 - aeson
 - aeson-casing
+- aeson-yaml
 - base >= 4.7 && < 5
 - bytestring
 - containers
@@ -34,7 +35,6 @@ dependencies:
 - transformers
 - unordered-containers
 - vector
-- yaml
 
 library:
   source-dirs: src
