@@ -29,4 +29,4 @@ deploy:
   file: bin/*
   file_glob: true
   on:
-    tag: true
+    tags: true
