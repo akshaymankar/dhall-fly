@@ -9,6 +9,8 @@ copyright:           "Akshay Mankar"
 extra-source-files:
 - README.md
 - ChangeLog.md
+- dhall-concourse/**/*
+- test/data/*.dhall
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
