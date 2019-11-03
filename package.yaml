@@ -22,21 +22,15 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/akshaymankar/dhall-fly#readme>
 
 dependencies:
-- aeson
-- aeson-casing
-- aeson-yaml
-- base >= 4.7 && < 5
-- bytestring
-- containers
-- dhall >= 1.27
-- dhall-json
-- either
-- scientific
-- template-haskell
-- text
-- transformers
-- unordered-containers
-- vector
+- aeson                >=1.4.5.0
+- aeson-casing         >=0.2.0.0
+- base                 >= 4.7      && < 5
+- dhall                >= 1.27.0   && < 1.28
+- scientific           >=0.3.6.2
+- text                 >=1.2.3.1
+- transformers         >=0.5.6.2
+- unordered-containers >=0.2.10.0
+- vector               >=0.12.0.3
 
 library:
   source-dirs: src
@@ -53,7 +47,10 @@ executables:
     - -with-rtsopts=-N
     - -Wall
     dependencies:
+    - aeson-yaml >=1.0.2.0
+    - bytestring >=0.10.8.2
     - dhall-fly
+    - dhall-json >= 1.5.0   && < 1.6
 
 tests:
   dhall-fly-test:
