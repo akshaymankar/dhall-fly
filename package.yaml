@@ -1,10 +1,12 @@
 name:                dhall-fly
-version:             0.1.0.0
+version:             0.1.0
 github:              "akshaymankar/dhall-fly"
 license:             BSD3
 author:              "Akshay Mankar"
 maintainer:          "itsakshaymankar@gmail.com"
 copyright:           "Akshay Mankar"
+category:            "Concourse, YAML, JSON, Dhall"
+synopsis:            "Translate concourse config from Dhall to YAML"
 
 extra-source-files:
 - README.md
