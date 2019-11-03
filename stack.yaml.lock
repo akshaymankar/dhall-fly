@@ -19,12 +19,12 @@ packages:
   original:
     hackage: dhall-json-1.5.0
 - completed:
-    hackage: aeson-yaml-1.0.2.0@sha256:c578472845478a35756131f4f4a6a929a9021aa2e494e6efe610c033e09868d0,1975
+    hackage: aeson-yaml-1.0.3.0@sha256:2c259cc436add5d3ec990bf793a4c253df7c7c9e8e5406a3ae91ac9d66828095,1975
     pantry-tree:
       size: 450
-      sha256: 84ccad9d7ede4bb692da57845428b5e49d80736d04375f0543461f343fac4627
+      sha256: b7261ed50bc39aab1bd0d75942da593954a4c45933710366b28d72292123d6db
   original:
-    hackage: aeson-yaml-1.0.2.0
+    hackage: aeson-yaml-1.0.3.0
 snapshots:
 - completed:
     size: 523700
