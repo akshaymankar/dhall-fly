@@ -1,4 +1,4 @@
-# dhall-fly
+# dhall-fly [![Build Status](https://travis-ci.org/akshaymankar/dhall-fly.svg?branch=master)](https://travis-ci.org/akshaymankar/dhall-fly)
 
 Tool to read concourse config written using [dhall-concourse](https://github.com/akshaymankar/dhall-concourse).
 
