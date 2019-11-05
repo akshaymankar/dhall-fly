@@ -11,6 +11,7 @@ Tool to read concourse config written using [dhall-concourse](https://github.com
 ### Copy the binary (only MacOS)
 
 Go to [Releases Page](https://github.com/akshaymankar/dhall-fly/releases), download the `dhall-fly-<version>-darwin.tgz`, use the binary inside. 
+
 **Note:** This is only tested on Mojave, should work on Catalina.
 
 ### From Hackage
