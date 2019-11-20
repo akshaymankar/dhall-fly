@@ -29,7 +29,7 @@ spec = do
 
     describe "Interpret TaskConfig" $ do
       it "should interpret a File task" $ do
-        task <- input auto "./dhall-concourse/defaults/TaskConfig.dhall"
+        task <- input auto "./test/data/task-config.dhall"
         task `shouldBe` defaultTaskConfig
 
 boshDeploymentResourceType = ResourceTypeCustom (CustomResourceType{..}) where
@@ -60,7 +60,7 @@ gitKuboCI = Resource{..} where
   resourcePublic = Nothing
 
 defaultTaskRunConfig = TaskRunConfig{..} where
-  trcPath = "CHANGEME"
+  trcPath = "true"
   trcArgs = Nothing
   trcDir = Nothing
   trcUser = Nothing
