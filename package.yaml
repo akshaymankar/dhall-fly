@@ -68,3 +68,15 @@ tests:
     - hspec
     build-tools:
     - hspec-discover
+
+benchmarks:
+  dhall-fly-bench:
+    main: Main.hs
+    source-dirs: bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dhall-fly
+    - time
