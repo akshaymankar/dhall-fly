@@ -302,6 +302,10 @@ data Job = Job { jobName                 :: Text
          deriving (Show, Generic, Eq)
          deriving FromDhall via FromDhallWithPrefix Job
 
+data GroupedJob = GroupedJob { gjJob :: Job, gjGroups :: [Text]}
+                deriving (Show, Generic, Eq)
+                deriving FromDhall via FromDhallWithPrefix GroupedJob
+
 $(deriveToJSON (aesonPrefix snakeCase) ''CustomResourceType)
 $(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskRunConfig)

@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 module Fly.Yaml where
@@ -5,7 +6,35 @@ module Fly.Yaml where
 import Data.Aeson
 import Data.List  (nub)
 import Data.Maybe (catMaybes)
+import Data.Text  (Text)
 import Fly.Types
+
+import qualified Data.HashMap.Strict as HM
+
+jobsToValue :: [Job] -> Value
+jobsToValue = Object . jobsToMap
+
+groupedJobsToValue :: [GroupedJob] -> Value
+groupedJobsToValue groupedJobs =
+  let mapWithoutGroups = jobsToMap $ map gjJob groupedJobs
+      groupsAsValue = (toJSON $ groupedJobsToMap groupedJobs)
+      groupsMap = HM.singleton "groups" groupsAsValue
+  in Object $ HM.union mapWithoutGroups groupsMap
+
+jobsToMap :: [Job] -> HM.HashMap Text Value
+jobsToMap jobs =
+  let resources = nub $ concatMap getResourcesFromJob jobs
+      resourceTypes = nub $ customResourceTypes $ map Fly.Types.resourceType resources
+  in HM.fromList [ ("resource_types", toJSON resourceTypes)
+                 , ("resources", toJSON resources)
+                 , ("jobs", toJSON jobs)
+                 ]
+
+groupedJobsToMap :: [GroupedJob] -> HM.HashMap Text [Text]
+groupedJobsToMap gjs =
+  let toGroupJobsPair (GroupedJob j groups) = map (, [jobName j]) groups
+      groupJobsPairs = concatMap toGroupJobsPair gjs
+  in HM.fromListWith (++) groupJobsPairs
 
 customResourceTypes :: [ResourceType] -> [ResourceType]
 customResourceTypes [] = []
@@ -37,12 +66,3 @@ getResourcesFromJob :: Job -> [Resource]
 getResourcesFromJob Job{..} =
   getResourcesFromSteps
   $ jobPlan ++ catMaybes [ jobOnSuccess, jobOnFailure, jobOnAbort, jobEnsure ]
-
-dhallToYaml :: [Job] -> Value
-dhallToYaml jobs =
-  let resources = nub $ concatMap getResourcesFromJob jobs
-      resourceTypes = nub $ customResourceTypes $ map Fly.Types.resourceType resources
-  in object [ "resource_types" .= resourceTypes
-            , "resources" .= resources
-            , "jobs" .= jobs
-            ]
