@@ -3,11 +3,10 @@ module Main where
 import Control.Applicative ((<|>))
 import Data.Aeson          (Value)
 import Data.Aeson.Yaml     (encode)
-import Data.Text           (Text)
-import Dhall               (auto, input)
+import Dhall               (auto, input, inputFile)
 import Dhall.JSON          (omitNull)
 import Fly.Types           (GroupedJob, Job)
-import Fly.Yaml            (jobsToValue, groupedJobsToValue)
+import Fly.Yaml            (groupedJobsToValue, jobsToValue)
 import Options.Applicative ((<**>))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -18,7 +17,7 @@ data PipelineType = Jobs | GroupedJobs
 
 data InputType = File FilePath | Stdin
 
-data Opts = Opts { inputType :: PipelineType, file :: InputType }
+data Opts = Opts { pipelineType :: PipelineType, inputType :: InputType }
 
 inputTypeParser :: O.Parser InputType
 inputTypeParser = (File <$> O.strOption (O.long "file"
@@ -48,16 +47,19 @@ optsParserWithHelp = O.info (optsParser <**> O.helper)
 main :: IO ()
 main = do
   opts <- O.execParser optsParserWithHelp
-  textDhall <- case file opts of
-                 Stdin     -> T.getContents
-                 File path -> T.readFile path
-  yaml <- dhallTextToValue (inputType opts) textDhall
+  yaml <- dhallTextToValue (pipelineType opts) (inputType opts)
   LBS.putStrLn $ encode $ omitNull yaml
 
-dhallTextToValue :: PipelineType -> Text -> IO Value
-dhallTextToValue Jobs textDhall = do
-  jobs <- input auto textDhall :: IO [Job]
+dhallTextToValue :: PipelineType -> InputType -> IO Value
+dhallTextToValue Jobs (File f) = do
+  jobs <- inputFile auto f :: IO [Job]
   pure $ jobsToValue jobs
-dhallTextToValue GroupedJobs textDhall = do
-  groupedJobs <- input auto textDhall :: IO [GroupedJob]
+dhallTextToValue Jobs Stdin = do
+  jobs <- (input auto =<< T.getContents) :: IO [Job]
+  pure $ jobsToValue jobs
+dhallTextToValue GroupedJobs (File f) = do
+  groupedJobs <- inputFile auto f :: IO [GroupedJob]
+  pure $ groupedJobsToValue groupedJobs
+dhallTextToValue GroupedJobs Stdin = do
+  groupedJobs <- (input auto =<< T.getContents) :: IO [GroupedJob]
   pure $ groupedJobsToValue groupedJobs
