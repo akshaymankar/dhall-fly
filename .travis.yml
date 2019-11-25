@@ -15,7 +15,7 @@ install:
 - stack setup --no-terminal
 - stack build --test --no-terminal --no-run-tests --only-dependencies -j 2
 script:
-- stack build --test --no-terminal
+- stack build --test --no-terminal --no-run-tests
 - stack test --no-terminal
 - stack build --copy-bins --local-bin-path ./bin
 - |
