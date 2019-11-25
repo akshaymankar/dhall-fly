@@ -167,6 +167,7 @@ data PutStep = PutStep { putPut       :: Maybe Text
                        , putResource  :: Resource
                        , putParams    :: Maybe (HashMap Text Value)
                        , putGetParams :: Maybe (HashMap Text Value)
+                       , putInputs    :: Maybe [Text]
                        , putTags      :: Maybe [Text]
                        , putTimeout   :: Maybe Text
                        , putAttempts  :: Maybe Natural
@@ -179,6 +180,10 @@ instance ToJSON PutStep where
                               , "resource"   .= toJSON (resourceName putResource <$ putPut)
                               , "params"     .= putParams
                               , "get_params" .= putGetParams
+                              , "tags"       .= putTags
+                              , "inputs"     .= putInputs
+                              , "timeout"    .= putTimeout
+                              , "attempts"   .= putAttempts
                               ]
 
 data TaskStep = TaskStep { taskTask          :: Text
@@ -188,6 +193,10 @@ data TaskStep = TaskStep { taskTask          :: Text
                          , taskImage         :: Maybe Text
                          , taskInputMapping  :: Maybe (HashMap Text Text)
                          , taskOutputMapping :: Maybe (HashMap Text Text)
+                         , taskVars          :: Maybe (HashMap Text Value)
+                         , taskTags          :: Maybe [Text]
+                         , taskTimeout       :: Maybe Text
+                         , taskAttempts      :: Maybe Natural
                          }
               deriving (Show, Generic, Eq)
               deriving FromDhall via FromDhallWithPrefix TaskStep
