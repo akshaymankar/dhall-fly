@@ -1,6 +1,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE RecordWildCards      #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 module Fly.TypesSpec where
 
 import Test.Hspec
