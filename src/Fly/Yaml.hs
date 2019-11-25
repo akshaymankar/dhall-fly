@@ -17,7 +17,9 @@ jobsToValue = Object . jobsToMap
 groupedJobsToValue :: [GroupedJob] -> Value
 groupedJobsToValue groupedJobs =
   let mapWithoutGroups = jobsToMap $ map gjJob groupedJobs
-      groupsAsValue = (toJSON $ groupedJobsToMap groupedJobs)
+      groupsAsMap = groupedJobsToMap groupedJobs
+      mkGroupValue group jobs acc = object [ "name" .= group, "jobs" .= jobs ] : acc
+      groupsAsValue = toJSON $ HM.foldrWithKey mkGroupValue [] groupsAsMap
       groupsMap = HM.singleton "groups" groupsAsValue
   in Object $ HM.union mapWithoutGroups groupsMap
 
