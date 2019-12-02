@@ -8,6 +8,7 @@ import Test.Hspec
 import Data.Aeson
 import Fly.Types
 import Fly.Yaml
+import qualified Data.HashMap.Strict as HM
 
 {-# ANN module "HLint: ignore Redundant do" #-}
 
@@ -84,7 +85,6 @@ spec = do
                      , jobEnsure = Nothing
                      }
 
-    -- TODO: Make unordered assertions
     describe "jobsToValue (without groups)" $ do
       it "should translate jobs to Value as concourse expects it" $ do
         jobsToValue [testJob]
@@ -100,9 +100,35 @@ spec = do
           `shouldBe` object [ "resources"      .= [gitResource, stepSlack, jobSlack]
                             , "resource_types" .= [slackResourceType]
                             , "jobs"           .= [testJob]
-                            , "groups"         .= toJSON [ object [ "name" .= "group2"
+                            , "groups"         .= toJSON [ object [ "name" .= "group1"
                                                                   , "jobs" .= [ jobName testJob ] ]
-                                                         , object [ "name" .= "group1"
+                                                         , object [ "name" .= "group2"
                                                                   , "jobs" .= [ jobName testJob ] ]
                                                          ]
                             ]
+      it "should retain order of groups" $ do
+        let testJob2 = (testJob{jobName = "test-job2"})
+        let testJob3 = (testJob{jobName = "test-job3"})
+        let groupedJob1 = GroupedJob testJob ["group1", "group2"]
+        let groupedJob2 = GroupedJob testJob2 ["group1", "group3"]
+        let groupedJob3 = GroupedJob testJob3 ["group1", "group3", "group4"]
+        let pipelineJSON = groupedJobsToValue [groupedJob1, groupedJob2, groupedJob3]
+        case pipelineJSON of
+          (Object o) ->
+            case HM.lookup "groups" o of
+              Just groups ->
+                groups `shouldBe` toJSON [ object [ "name" .= "group1"
+                                                  , "jobs" .= [ jobName testJob
+                                                              , jobName testJob2
+                                                              , jobName testJob3 ] ]
+                                         , object [ "name" .= "group2"
+                                                  , "jobs" .= [ jobName testJob ] ]
+                                         , object [ "name" .= "group3"
+                                                  , "jobs" .= [ jobName testJob2
+                                                              , jobName testJob3 ] ]
+                                         , object [ "name" .= "group4"
+                                                  , "jobs" .= [ jobName testJob3 ] ]
+
+                                         ]
+              Nothing -> fail "Expected groups to be present"
+          _ -> fail "Expected pipeline yaml to be object"

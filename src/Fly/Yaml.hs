@@ -10,6 +10,7 @@ import Data.Text  (Text)
 import Fly.Types
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Ordered as OM
 
 jobsToValue :: [Job] -> Value
 jobsToValue = Object . jobsToMap
@@ -18,8 +19,8 @@ groupedJobsToValue :: [GroupedJob] -> Value
 groupedJobsToValue groupedJobs =
   let mapWithoutGroups = jobsToMap $ map gjJob groupedJobs
       groupsAsMap = groupedJobsToMap groupedJobs
-      mkGroupValue group jobs acc = object [ "name" .= group, "jobs" .= jobs ] : acc
-      groupsAsValue = toJSON $ HM.foldrWithKey mkGroupValue [] groupsAsMap
+      mkGroupValue (group, jobs) acc = object [ "name" .= group, "jobs" .= jobs ] : acc
+      groupsAsValue = toJSON $ foldr mkGroupValue [] (OM.assocs groupsAsMap)
       groupsMap = HM.singleton "groups" groupsAsValue
   in Object $ HM.union mapWithoutGroups groupsMap
 
@@ -32,11 +33,12 @@ jobsToMap jobs =
                  , ("jobs", toJSON jobs)
                  ]
 
-groupedJobsToMap :: [GroupedJob] -> HM.HashMap Text [Text]
+groupedJobsToMap :: [GroupedJob] -> OM.OMap Text [Text]
 groupedJobsToMap gjs =
   let toGroupJobsPair (GroupedJob j groups) = map (, [jobName j]) groups
       groupJobsPairs = concatMap toGroupJobsPair gjs
-  in HM.fromListWith (++) groupJobsPairs
+      foldFn pair = OM.unionWithL (\_ v1 v2 -> v1 ++ v2) (OM.fromList [pair])
+  in foldr foldFn OM.empty groupJobsPairs
 
 customResourceTypes :: [ResourceType] -> [ResourceType]
 customResourceTypes [] = []
