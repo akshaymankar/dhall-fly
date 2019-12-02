@@ -1,5 +1,9 @@
 # Changelog for dhall-fly
 
+## 0.2.1
+
+* Groups retain the order they are in list of grouped jobs
+
 ## 0.2.0
 
 * Tested with dhall-concourse 0.5.0
