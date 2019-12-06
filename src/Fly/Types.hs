@@ -243,7 +243,7 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
           deriving (Show, Generic, Eq)
 
 instance FromDhall Step where
-  autoWith _ = Dhall.Type{..} where
+  autoWith _ = Dhall.Decoder{..} where
     expected = $(staticDhallExpression "./dhall-concourse/types/Step.dhall")
     extract (Lam _ _ --Step
              (Lam _ _ --Constructors

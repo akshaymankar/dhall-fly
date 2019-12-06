@@ -27,7 +27,7 @@ dependencies:
 - aeson                >=1.4.5.0
 - aeson-casing         >=0.2.0.0
 - base                 >= 4.7      && < 5
-- dhall                >= 1.27.0   && < 1.28
+- dhall                >= 1.28.0   && < 1.29
 - scientific           >=0.3.6.2
 - text                 >=1.2.3.1
 - transformers         >=0.5.6.2
@@ -54,7 +54,7 @@ executables:
     - aeson-yaml >=1.0.3.0
     - bytestring >=0.10.8.2
     - dhall-fly
-    - dhall-json >= 1.5.0   && < 1.6
+    - dhall-json >= 1.6.0   && < 1.7
 
 tests:
   dhall-fly-test:

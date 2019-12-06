@@ -13,7 +13,7 @@ import Dhall.TH
 import qualified Data.Vector as V
 
 instance FromDhall Value where
-  autoWith _ = Dhall.Type{..} where
+  autoWith _ = Dhall.Decoder{..} where
     expected = $(staticDhallExpression "let Prelude = ./dhall-concourse/lib/prelude.dhall in Prelude.JSON.Type")
     extract (Lam _ (Const Dhall.Core.Type)
               (Lam _ _ x)) = extractJSONFromApps x
@@ -25,4 +25,3 @@ instance FromDhall Value where
     extractJSONFromApps (App (Field (Var (V _ 0)) "array") a) = Array . V.fromList <$> Dhall.extract auto a
     extractJSONFromApps (Field (Var (V _ 0)) "null") = pure Null
     extractJSONFromApps t = typeError expected t
-
