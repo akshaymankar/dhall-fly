@@ -1,5 +1,9 @@
 # Changelog for dhall-fly
 
+## 0.2.2
+
+* Upgrade dhall to 1.28 and dhall-json to 1.6
+
 ## 0.2.1
 
 * Groups retain the order they are in list of grouped jobs
