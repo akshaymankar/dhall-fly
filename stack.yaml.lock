@@ -5,19 +5,19 @@
 
 packages:
 - completed:
-    hackage: dhall-1.28.0@sha256:a0b38be83ab76c59adf6d67868b9b183591edc68d2c3727d38598ddc12c36c95,31625
+    hackage: dhall-1.29.0@sha256:48e9c106ac611cc14f2f68d2a2df6358bfc371654a2b981ac3d7d73dccdc7ae2,32755
     pantry-tree:
-      size: 241424
-      sha256: 8c92a349408edf2c72760025740b4950cd0a1d2ce0ba393333332c1bbc469967
+      size: 244291
+      sha256: ca99d89b077c2c536179f3b1751dfd5da70cb6eb3e052e408f0841c1c9582a01
   original:
-    hackage: dhall-1.28.0
+    hackage: dhall-1.29.0
 - completed:
-    hackage: dhall-json-1.6.0@sha256:a3c808ac29adb91fbbb4002fa11885b045f4f28933ce5102223a67dda8aa9cfd,4088
+    hackage: dhall-json-1.6.1@sha256:97fb77f7060c9bc2b0544104a006e5cbdaa1613d4896e0e4f14398861bdd071e,4224
     pantry-tree:
       size: 3181
-      sha256: 52175ac87a2c446aca84d4413b3f3e50f7cbbf4fea73f67340184d6924dc7d6f
+      sha256: 43f08837e71185b2762ad41951cba85210d6f7c97859821540a14ddae3af3b77
   original:
-    hackage: dhall-json-1.6.0
+    hackage: dhall-json-1.6.1
 - completed:
     hackage: aeson-yaml-1.0.5.0@sha256:5786f021c1e088d6a5aa259120ec5b1f22bb1757f4427c1a87e0513d00f17f31,1975
     pantry-tree:
@@ -33,15 +33,15 @@ packages:
   original:
     hackage: atomic-write-0.2.0.7
 - completed:
-    hackage: prettyprinter-1.5.1@sha256:fca87c3e2611d3499a0341a59857e9b424a23f31646e4737d535a18582284f96,5375
+    hackage: prettyprinter-1.6.0@sha256:fa5479994f35b40fe3cc0d666e6b02e39444672f33f22c09cae5c0c4724f7f10,5455
     pantry-tree:
-      size: 2106
-      sha256: 86fd583112db41bac5ac9ecf258ec402ad615253e9c5eabc56ec127bfb94c096
+      size: 2194
+      sha256: ca03433d8f623eef663b0f7ea65b687f79dd3f85963019494d4e9311afb73574
   original:
-    hackage: prettyprinter-1.5.1
+    hackage: prettyprinter-1.6.0
 snapshots:
 - completed:
-    size: 523700
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/7.yaml
-    sha256: 8e3f3c894be74d71fa4bf085e0a8baae7e4d7622d07ea31a52736b80f8b9bb1a
-  original: lts-14.7
+    size: 523541
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/23.yaml
+    sha256: f761fe419a1a44fc3ef47f5bfb1853304d13320fc72b45d2798c08d21dabc23c
+  original: lts-14.23
