@@ -57,6 +57,7 @@ getResourcesFromStep s =
     stepResources (Get GetStep{..} _)   = [getResource]
     stepResources (Put PutStep{..} _)   = [putResource]
     stepResources (Task _ _)            = []
+    stepResources (SetPipeline _ _)     = []
     stepResources (Aggregate steps _)   = getResourcesFromSteps steps
     stepResources (Do steps _)          = getResourcesFromSteps steps
     stepResources (Try step _)          = getResourcesFromStep step

@@ -119,6 +119,34 @@ spec = do
                                             , "vars"          .= Null
                                             , "tags"          .= Null ]
 
+    describe "SetPipelineStep" $ do
+      let testSP = SetPipelineStep{..} where
+            spSetPipeline = "test-pipeline"
+            spFile = "test-file"
+            spVars = Nothing
+            spVarFiles = Nothing
+            spTags = Nothing
+            spTimeout = Nothing
+            spAttempts = Nothing
+
+      describe "Interpret" $ do
+        it "should interpret a set pipeline step" $ do
+          sp <- input auto "./test/data/set-pipeline-step.dhall"
+          sp `shouldBe` testSP
+
+        it "should interpret a set pipeline step as step" $ do
+          sp <- input auto "./dhall-concourse/helpers/setPipelineStep.dhall ./test/data/set-pipeline-step.dhall"
+          sp `shouldBe` SetPipeline testSP (StepHooks Nothing Nothing Nothing Nothing)
+      describe "ToJSON" $ do
+        it "should translate a set pipeline step" $ do
+          toJSON testSP `shouldBe` object [ "set_pipeline" .= "test-pipeline"
+                                          , "file"         .= "test-file"
+                                          , "vars"         .= Null
+                                          , "var_files"    .= Null
+                                          , "attempts"     .= Null
+                                          , "timeout"      .= Null
+                                          , "tags"         .= Null ]
+
 boshDeploymentResourceType :: ResourceType
 boshDeploymentResourceType = ResourceTypeCustom (CustomResourceType{..}) where
   crtName = "bosh-deployment"
